@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Image,
   Pressable,
@@ -9,7 +9,9 @@ import {
   type TextInputProps,
 } from 'react-native';
 import { icons } from '../assets';
-import { colors, radii, typography } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import type { ColorPalette } from '../theme/colors';
+import { radii, typography } from '../theme';
 
 type AuthTextInputProps = TextInputProps & {
   label: string;
@@ -23,6 +25,8 @@ export function AuthTextInput({
   style,
   ...props
 }: AuthTextInputProps) {
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const isPasswordField = secureTextEntry === true;
   const hidePassword = isPasswordField && !isPasswordVisible;
@@ -30,7 +34,11 @@ export function AuthTextInput({
   return (
     <View style={styles.wrapper}>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.inputContainer}>
+      <View
+        style={[
+          styles.inputContainer,
+          error ? styles.inputContainerError : null,
+        ]}>
         <TextInput
           autoCapitalize="none"
           placeholderTextColor={colors.text.placeholder}
@@ -38,7 +46,6 @@ export function AuthTextInput({
           style={[
             styles.input,
             isPasswordField && styles.inputWithIcon,
-            error ? styles.inputError : null,
             style,
           ]}
           {...props}
@@ -63,49 +70,60 @@ export function AuthTextInput({
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    gap: 8,
-  },
-  label: {
-    ...typography.label,
-    color: colors.text.secondary,
-  },
-  inputContainer: {
-    position: 'relative',
-  },
-  input: {
-    backgroundColor: colors.input.background,
-    borderColor: colors.input.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    color: colors.input.text,
-    fontSize: 16,
-    minHeight: 52,
-    paddingHorizontal: 16,
-  },
-  inputWithIcon: {
-    paddingRight: 48,
-  },
-  inputError: {
-    borderColor: colors.error,
-  },
-  iconButton: {
-    alignItems: 'center',
-    bottom: 0,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: 16,
-    top: 0,
-    width: 24,
-  },
-  icon: {
-    height: 20,
-    tintColor: colors.text.secondary,
-    width: 20,
-  },
-  error: {
-    ...typography.caption,
-    color: colors.error,
-  },
-});
+function createStyles(colors: ColorPalette, isDark: boolean) {
+  return StyleSheet.create({
+    wrapper: {
+      gap: 8,
+    },
+    label: {
+      ...typography.label,
+      color: colors.text.secondary,
+    },
+    inputContainer: {
+      backgroundColor: colors.input.background,
+      borderColor: colors.input.border,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      elevation: isDark ? 5 : 4,
+      minHeight: 52,
+      position: 'relative',
+      shadowColor: colors.input.shadow,
+      shadowOffset: { width: 0, height: isDark ? 4 : 3 },
+      shadowOpacity: isDark ? 0.35 : 0.18,
+      shadowRadius: isDark ? 10 : 8,
+    },
+    inputContainerError: {
+      borderColor: colors.error,
+      shadowColor: colors.error,
+      shadowOpacity: isDark ? 0.25 : 0.12,
+    },
+    input: {
+      backgroundColor: 'transparent',
+      color: colors.input.text,
+      fontSize: 16,
+      minHeight: 52,
+      paddingHorizontal: 16,
+    },
+    inputWithIcon: {
+      paddingRight: 48,
+    },
+    iconButton: {
+      alignItems: 'center',
+      bottom: 0,
+      justifyContent: 'center',
+      position: 'absolute',
+      right: 16,
+      top: 0,
+      width: 24,
+    },
+    icon: {
+      height: 20,
+      tintColor: colors.text.secondary,
+      width: 20,
+    },
+    error: {
+      ...typography.caption,
+      color: colors.error,
+    },
+  });
+}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
@@ -8,8 +8,10 @@ import {
   Spacer,
 } from '../components';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import type { AuthStackParamList } from '../navigation/types';
-import { colors, spacing, typography } from '../theme';
+import type { ColorPalette } from '../theme/colors';
+import { spacing, typography } from '../theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -19,6 +21,8 @@ type FieldErrors = {
 };
 
 export function LoginScreen({ navigation }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -120,37 +124,39 @@ export function LoginScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    gap: spacing.sm,
-  },
-  brand: {
-    color: colors.text.brand,
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  title: {
-    ...typography.title,
-    color: colors.text.primary,
-  },
-  subtitle: {
-    ...typography.subtitle,
-    color: colors.text.secondary,
-  },
-  formError: {
-    color: colors.error,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  footer: {
-    gap: spacing.md,
-    marginTop: 'auto',
-    paddingBottom: spacing.sm,
-  },
-  footerText: {
-    color: colors.text.secondary,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-});
+function createStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    header: {
+      gap: spacing.sm,
+    },
+    brand: {
+      color: colors.text.brand,
+      fontSize: 20,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    title: {
+      ...typography.title,
+      color: colors.text.primary,
+    },
+    subtitle: {
+      ...typography.subtitle,
+      color: colors.text.secondary,
+    },
+    formError: {
+      color: colors.error,
+      fontSize: 14,
+      textAlign: 'center',
+    },
+    footer: {
+      gap: spacing.md,
+      marginTop: 'auto',
+      paddingBottom: spacing.sm,
+    },
+    footerText: {
+      color: colors.text.secondary,
+      fontSize: 14,
+      textAlign: 'center',
+    },
+  });
+}

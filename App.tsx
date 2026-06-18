@@ -9,19 +9,31 @@ import React from 'react';
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
-import { colors } from './src/theme';
 
-function App() {
+function AppContent() {
+  const { colors, isDark } = useTheme();
+
   return (
-    <SafeAreaProvider>
+    <>
       <StatusBar
         backgroundColor={colors.background.primary}
-        barStyle="light-content"
+        barStyle={isDark ? 'light-content' : 'dark-content'}
       />
       <AuthProvider>
         <RootNavigator />
       </AuthProvider>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,7 +9,9 @@ import {
   type ViewStyle,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { colors, radii, typography } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import type { ColorPalette } from '../theme/colors';
+import { radii, typography } from '../theme';
 
 type AuthButtonProps = PressableProps & {
   title: string;
@@ -25,6 +27,8 @@ export function AuthButton({
   style,
   ...props
 }: AuthButtonProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isDisabled = disabled || loading;
 
   if (variant === 'secondary') {
@@ -75,49 +79,51 @@ export function AuthButton({
   );
 }
 
-const styles = StyleSheet.create({
-  button: {
-    alignItems: 'center',
-    borderRadius: radii.pill,
-    justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: 20,
-  },
-  primaryWrapper: {
-    borderRadius: radii.pill,
-    elevation: 6,
-    minHeight: 52,
-    overflow: 'hidden',
-    shadowColor: colors.button.glow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
-  },
-  gradient: {
-    width: '100%',
-    alignItems: 'center',
-    borderRadius: radii.pill,
-    justifyContent: 'center',
-    minHeight: 52,
-  },
-  secondary: {
-    backgroundColor: 'transparent',
-    borderColor: colors.brand.teal,
-    borderWidth: 1.5,
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-  disabled: {
-    opacity: 0.55,
-  },
-  label: {
-    ...typography.button,
-  },
-  primaryLabel: {
-    color: colors.button.text,
-  },
-  secondaryLabel: {
-    color: colors.brand.tealLight,
-  },
-});
+function createStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    button: {
+      alignItems: 'center',
+      borderRadius: radii.pill,
+      justifyContent: 'center',
+      minHeight: 52,
+      paddingHorizontal: 20,
+    },
+    primaryWrapper: {
+      borderRadius: radii.pill,
+      elevation: 6,
+      minHeight: 52,
+      overflow: 'hidden',
+      shadowColor: colors.button.glow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.6,
+      shadowRadius: 12,
+    },
+    gradient: {
+      width: '100%',
+      alignItems: 'center',
+      borderRadius: radii.pill,
+      justifyContent: 'center',
+      minHeight: 52,
+    },
+    secondary: {
+      backgroundColor: 'transparent',
+      borderColor: colors.brand.teal,
+      borderWidth: 1.5,
+    },
+    pressed: {
+      opacity: 0.85,
+    },
+    disabled: {
+      opacity: 0.55,
+    },
+    label: {
+      ...typography.button,
+    },
+    primaryLabel: {
+      color: colors.button.text,
+    },
+    secondaryLabel: {
+      color: colors.brand.tealLight,
+    },
+  });
+}
