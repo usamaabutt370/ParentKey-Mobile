@@ -1,6 +1,10 @@
-import { colors } from './colors';
-
-export { colors } from './colors';
+export {
+  colors,
+  darkColors,
+  getColors,
+  lightColors,
+  type ColorPalette,
+} from './colors';
 
 export const spacing = {
   xs: 4,
@@ -46,12 +50,3 @@ export const typography = {
     fontWeight: '400' as const,
   },
 } as const;
-
-export const theme = {
-  colors,
-  spacing,
-  radii,
-  typography,
-} as const;
-
-export type Theme = typeof theme;
