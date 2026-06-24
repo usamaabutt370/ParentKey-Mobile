@@ -5,3 +5,4 @@ export { ScreenBackground } from './ScreenBackground';
 export { ScreenLayout } from './ScreenLayout';
 export { useScreenStyles } from './screenStyles';
 export { Spacer } from './Spacer';
+export * from './parent';

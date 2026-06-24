@@ -10,22 +10,22 @@ import { ScreenLayout } from '../components';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ChildHomeScreen } from '../screens/ChildHomeScreen';
-import { ParentHomeScreen } from '../screens/ParentHomeScreen';
 import type { ColorPalette } from '../theme/colors';
 import { AuthNavigator } from './AuthNavigator';
+import { ParentTabNavigator } from './ParentTabNavigator';
 import type { AppStackParamList } from './types';
 
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 
 function AppStackNavigator() {
   const { role } = useAuth();
-  const initialRouteName = role === 'child' ? 'ChildHome' : 'ParentHome';
+  const initialRouteName = role === 'child' ? 'ChildHome' : 'ParentTabs';
 
   return (
     <AppStack.Navigator
       initialRouteName={initialRouteName}
       screenOptions={{ headerShown: false }}>
-      <AppStack.Screen component={ParentHomeScreen} name="ParentHome" />
+      <AppStack.Screen component={ParentTabNavigator} name="ParentTabs" />
       <AppStack.Screen component={ChildHomeScreen} name="ChildHome" />
     </AppStack.Navigator>
   );
