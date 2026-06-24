@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
@@ -9,10 +9,12 @@ import {
   Spacer,
 } from '../components';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { isValidEmail } from '../lib/auth';
 import type { AuthStackParamList } from '../navigation/types';
 import type { UserRole } from '../types/auth';
-import { colors, spacing, typography } from '../theme';
+import type { ColorPalette } from '../theme/colors';
+import {  spacing, typography } from '../theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Signup'>;
 
@@ -25,6 +27,8 @@ type FieldErrors = {
 };
 
 export function SignupScreen({ navigation, route }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { signUp } = useAuth();
   const [role, setRole] = useState<UserRole>(route.params?.role ?? 'parent');
   const [firstName, setFirstName] = useState('');
@@ -209,7 +213,8 @@ export function SignupScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ColorPalette) {
+  return StyleSheet.create({
   header: {
     gap: spacing.sm,
   },
@@ -243,7 +248,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   footerLink: {
-    color: colors.text.brand,
-    fontWeight: '600',
-  },
-});
+      color: colors.text.brand,
+      fontWeight: '600',
+    },
+  });
+} 

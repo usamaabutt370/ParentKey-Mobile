@@ -1,10 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { AuthButton, ScreenLayout, screenStyles } from '../components';
+import { AuthButton, ScreenLayout, useScreenStyles } from '../components';
 import { useAuth } from '../context/AuthContext';
 import { USER_ROLE_LABELS } from '../types/auth';
 
 export function ChildHomeScreen() {
+  const screenStyles = useScreenStyles();
   const { session, signOut } = useAuth();
   const firstName = session?.user.user_metadata?.first_name;
 

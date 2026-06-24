@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
@@ -8,8 +8,10 @@ import {
   Spacer,
 } from '../components';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import type { AuthStackParamList } from '../navigation/types';
-import { colors, spacing, typography } from '../theme';
+import type { ColorPalette } from '../theme/colors';
+import { spacing, typography } from '../theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -19,6 +21,8 @@ type FieldErrors = {
 };
 
 export function LoginScreen({ navigation }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -122,7 +126,8 @@ export function LoginScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ColorPalette) {
+  return StyleSheet.create({
   header: {
     gap: spacing.sm,
   },
@@ -159,4 +164,5 @@ const styles = StyleSheet.create({
     color: colors.text.brand,
     fontWeight: '600',
   },
-});
+  });
+}
