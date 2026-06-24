@@ -109,12 +109,14 @@ export function LoginScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Don't have an account?</Text>
-        <AuthButton
-          onPress={() => navigation.navigate('Signup')}
-          title="Create account"
-          variant="secondary"
-        />
+        <Text style={styles.footerText}>
+          Don't have an account?{' '}
+          <Text
+            style={styles.footerLink}
+            onPress={() => navigation.navigate('Signup')}>
+            Sign up
+          </Text>
+        </Text>
       </View>
     </ScreenLayout>
   );
@@ -152,5 +154,9 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     fontSize: 14,
     textAlign: 'center',
+  },
+  footerLink: {
+    color: colors.text.brand,
+    fontWeight: '600',
   },
 });

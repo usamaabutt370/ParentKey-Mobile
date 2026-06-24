@@ -195,14 +195,15 @@ export function SignupScreen({ navigation, route }: Props) {
         <AuthButton loading={loading} onPress={handleSignup} title="Sign up" />
       </View>
 
-      <Spacer.Column numberOfSpaces={12} />
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Already have an account?</Text>
-        <AuthButton
-          onPress={() => navigation.navigate('Login')}
-          title="Log in"
-          variant="secondary"
-        />
+        <Text style={styles.footerText}>
+          Already have an account?{' '}
+          <Text
+            style={styles.footerLink}
+            onPress={() => navigation.navigate('Login')}>
+            Log in
+          </Text>
+        </Text>
       </View>
     </ScreenLayout>
   );
@@ -240,5 +241,9 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     fontSize: 14,
     textAlign: 'center',
+  },
+  footerLink: {
+    color: colors.text.brand,
+    fontWeight: '600',
   },
 });
