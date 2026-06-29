@@ -8,7 +8,10 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  type Edge,
+} from 'react-native-safe-area-context';
 import { spacing } from '../theme';
 import { ScreenBackground } from './ScreenBackground';
 
@@ -18,6 +21,7 @@ type ScreenLayoutProps = {
   keyboardAvoiding?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
   style?: StyleProp<ViewStyle>;
+  safeAreaEdges?: Edge[];
 };
 
 export function ScreenLayout({
@@ -26,6 +30,7 @@ export function ScreenLayout({
   keyboardAvoiding = false,
   contentStyle,
   style,
+  safeAreaEdges = ['top', 'right', 'bottom', 'left'],
 }: ScreenLayoutProps) {
   const content = scrollable ? (
     <ScrollView
@@ -52,7 +57,7 @@ export function ScreenLayout({
 
   return (
     <ScreenBackground>
-      <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.safeArea}>
+      <SafeAreaView edges={safeAreaEdges} style={styles.safeArea}>
         <View style={[styles.container, style]}>{body}</View>
       </SafeAreaView>
     </ScreenBackground>
