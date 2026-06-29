@@ -19,6 +19,7 @@ import type { ParentTabParamList } from './types';
 const Tab = createBottomTabNavigator<ParentTabParamList>();
 
 const HIDDEN_TAB_BAR_ROUTES = new Set([
+  'ChildDetail',
   'AddChildProfile',
   'AddChildAccount',
   'AddChildSuccess',

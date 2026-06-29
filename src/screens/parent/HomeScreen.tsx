@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import {
@@ -13,8 +13,8 @@ import {
 import { ScreenLayout, useScreenStyles } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useParentChildren } from '../../hooks/useParentChildren';
 import {
-  MOCK_CHILDREN,
   MOCK_DASHBOARD_STATS,
 } from '../../constants/mockParentData';
 import {
@@ -35,6 +35,7 @@ export function ParentHomeScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { session } = useAuth();
+  const { children, loading: childrenLoading } = useParentChildren();
   const firstName = session?.user.user_metadata?.first_name;
 
   return (
@@ -115,9 +116,26 @@ export function ParentHomeScreen() {
           title="Your children"
         />
         <View style={styles.childList}>
-          {MOCK_CHILDREN.map(child => (
-            <ChildCard child={child} key={child.id} />
-          ))}
+          {childrenLoading ? (
+            <ActivityIndicator color={colors.brand.tealLight} size="small" />
+          ) : children.length === 0 ? (
+            <Text style={styles.emptyChildrenText}>
+              No children linked yet. Tap See all to add one.
+            </Text>
+          ) : (
+            children.map(child => (
+              <ChildCard
+                child={child}
+                key={child.id}
+                onPress={() =>
+                  navigation.navigate('Children', {
+                    screen: 'ChildDetail',
+                    params: { childId: child.id },
+                  })
+                }
+              />
+            ))
+          )}
         </View>
       </View>
     </ScreenLayout>
@@ -167,6 +185,10 @@ function createStyles(colors: ColorPalette) {
     },
     childList: {
       gap: spacing.sm,
+    },
+    emptyChildrenText: {
+      ...typography.body,
+      color: colors.text.secondary,
     },
   });
 }

@@ -1,3 +1,4 @@
+import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { UserRole } from '../types/auth';
 import type { ChildProfileDraft } from '../types/child';
 
@@ -9,6 +10,9 @@ export type AuthStackParamList = {
 
 export type ChildrenStackParamList = {
   ChildrenList: undefined;
+  ChildDetail: {
+    childId: string;
+  };
   AddChildProfile: undefined;
   AddChildAccount: {
     profile: ChildProfileDraft;
@@ -28,7 +32,7 @@ export type ControlsStackParamList = {
 
 export type ParentTabParamList = {
   Home: undefined;
-  Children: undefined;
+  Children: NavigatorScreenParams<ChildrenStackParamList> | undefined;
   Controls: undefined;
   Reports: undefined;
   Settings: undefined;

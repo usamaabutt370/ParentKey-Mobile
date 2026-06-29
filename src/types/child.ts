@@ -14,3 +14,17 @@ export type ChildProfileDraft = {
   age?: string;
   avatarId?: ChildAvatarId;
 };
+
+/** Child account: `children` row joined with linked `profiles` row. */
+export type ChildProfile = {
+  id: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  fullName: string | null;
+  parentId: string;
+  age: number | null;
+  avatarId: ChildAvatarId | null;
+  createdAt: string;
+  updatedAt: string;
+};

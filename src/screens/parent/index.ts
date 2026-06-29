@@ -1,4 +1,5 @@
 export { ParentChildrenScreen } from './ChildrenScreen';
+export { ChildDetailScreen } from './ChildDetailScreen';
 export { ParentControlsScreen } from './ControlsScreen';
 export { ParentHomeScreen } from './HomeScreen';
 export { ParentReportsScreen } from './ReportsScreen';
