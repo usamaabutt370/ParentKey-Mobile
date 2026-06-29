@@ -4,6 +4,7 @@ import type { ChildProfileDraft } from '../types/child';
 export type AuthStackParamList = {
   Login: undefined;
   Signup: { role?: UserRole } | undefined;
+  ForgotPassword: undefined;
 };
 
 export type ChildrenStackParamList = {

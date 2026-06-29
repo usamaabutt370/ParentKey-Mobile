@@ -39,6 +39,15 @@
 	<string></string>
 	<key>REACT_NATIVE_DEVICE_ACTIVITY_APP_GROUP</key>
 	<string>group.org.reactjs.native.example.ParentKey</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>parentkey</string>
+			</array>
+		</dict>
+	</array>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>

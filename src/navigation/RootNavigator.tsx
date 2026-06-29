@@ -13,6 +13,7 @@ import { ChildHomeScreen } from '../screens/ChildHomeScreen';
 import type { ColorPalette } from '../theme/colors';
 import { AuthNavigator } from './AuthNavigator';
 import { ParentTabNavigator } from './ParentTabNavigator';
+import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import type { AppStackParamList } from './types';
 
 const AppStack = createNativeStackNavigator<AppStackParamList>();
@@ -48,7 +49,7 @@ function buildNavigationTheme(colors: ColorPalette, isDark: boolean) {
 }
 
 export function RootNavigator() {
-  const { session, loading } = useAuth();
+  const { session, loading, passwordRecoveryPending } = useAuth();
   const { colors, isDark } = useTheme();
   const navigationTheme = useMemo(
     () => buildNavigationTheme(colors, isDark),
@@ -66,7 +67,13 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer theme={navigationTheme}>
-      {session ? <AppStackNavigator /> : <AuthNavigator />}
+      {passwordRecoveryPending ? (
+        <ResetPasswordScreen />
+      ) : session ? (
+        <AppStackNavigator />
+      ) : (
+        <AuthNavigator />
+      )}
     </NavigationContainer>
   );
 }

@@ -7,7 +7,17 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "ios:install": "cd ios/ && pod install && cd ..",
+    "prebuild:clean": "expo prebuild --clean",
+    "build:android": "eas build --profile preview --platform android",
+    "build:android:play": "eas build --profile production --platform android",
+    "build:android:play-verify-apk": "eas build --profile production-verify --platform android",
+    "apk:debug": "cd android && ./gradlew assembleDebug",
+    "apk:release": "cd android && NODE_ENV=production ./gradlew assembleRelease",
+    "aab:release": "cd android && ./gradlew bundleRelease",
+    "prebuild:android": "npx expo prebuild --platform android",
+    "prebuild:ios": "npx expo prebuild --platform ios"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^3.1.1",

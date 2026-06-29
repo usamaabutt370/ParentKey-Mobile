@@ -6,9 +6,15 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { Linking } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import {
+  createSessionFromAuthUrl,
+  isPasswordRecoveryUrl,
+  requestPasswordReset,
   signUpUser,
+  updatePassword,
+  type AuthActionResult,
   type SignUpParams,
   type SignUpResult,
 } from '../lib/auth';
@@ -27,9 +33,13 @@ type AuthContextValue = {
   session: Session | null;
   role: UserRole | null;
   loading: boolean;
+  passwordRecoveryPending: boolean;
   signIn: (params: SignInParams) => Promise<string | null>;
   signUp: (params: SignUpParams) => Promise<SignUpResult>;
   signOut: () => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<AuthActionResult>;
+  updatePassword: (password: string) => Promise<AuthActionResult>;
+  clearPasswordRecovery: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -37,8 +47,24 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordRecoveryPending, setPasswordRecoveryPending] = useState(false);
 
   const role = useMemo(() => getRoleFromSession(session), [session]);
+
+  const handleAuthRedirect = useCallback(async (url: string | null) => {
+    if (!url || !isPasswordRecoveryUrl(url)) {
+      return;
+    }
+
+    const result = await createSessionFromAuthUrl(url);
+
+    if (result.ok) {
+      setPasswordRecoveryPending(true);
+      return;
+    }
+
+    console.warn('Password recovery link failed:', result.message);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
@@ -48,13 +74,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
       setLoading(false);
+
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecoveryPending(true);
+      }
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    void Linking.getInitialURL().then(handleAuthRedirect);
+
+    const linkingSubscription = Linking.addEventListener('url', ({ url }) => {
+      void handleAuthRedirect(url);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      linkingSubscription.remove();
+    };
+  }, [handleAuthRedirect]);
 
   const signIn = useCallback(async ({ email, password }: SignInParams) => {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -76,6 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return 'This account does not have a valid role. Please sign up again or contact support.';
     }
 
+    setPasswordRecoveryPending(false);
     return null;
   }, []);
 
@@ -85,12 +125,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    setPasswordRecoveryPending(false);
     await supabase.auth.signOut();
   }, []);
 
+  const clearPasswordRecovery = useCallback(() => {
+    setPasswordRecoveryPending(false);
+  }, []);
+
   const value = useMemo(
-    () => ({ session, role, loading, signIn, signUp, signOut }),
-    [session, role, loading, signIn, signUp, signOut],
+    () => ({
+      session,
+      role,
+      loading,
+      passwordRecoveryPending,
+      signIn,
+      signUp,
+      signOut,
+      requestPasswordReset,
+      updatePassword,
+      clearPasswordRecovery,
+    }),
+    [
+      session,
+      role,
+      loading,
+      passwordRecoveryPending,
+      signIn,
+      signUp,
+      signOut,
+      clearPasswordRecovery,
+    ],
   );
 
   return (
