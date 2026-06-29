@@ -107,6 +107,12 @@ export function LoginScreen({ navigation }: Props) {
           textContentType="password"
           value={password}
         />
+        <Spacer.Column numberOfSpaces={4} />
+        <Text
+          style={styles.forgotPasswordLink}
+          onPress={() => navigation.navigate('ForgotPassword')}>
+          Forgot password?
+        </Text>
         <Spacer.Column numberOfSpaces={12} />
         {formError ? <Text style={styles.formError}>{formError}</Text> : null}
         <AuthButton loading={loading} onPress={handleLogin} title="Log in" />
@@ -149,6 +155,12 @@ function createStyles(colors: ColorPalette) {
     color: colors.error,
     fontSize: 14,
     textAlign: 'center',
+  },
+  forgotPasswordLink: {
+    alignSelf: 'flex-end',
+    color: colors.text.brand,
+    fontSize: 14,
+    fontWeight: '600',
   },
   footer: {
     gap: spacing.md,
