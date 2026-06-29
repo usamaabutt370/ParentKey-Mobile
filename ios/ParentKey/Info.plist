@@ -33,8 +33,12 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSFamilyControlsUsageDescription</key>
+	<string>ParentKey uses Screen Time to let parents block or limit apps on this child device.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
+	<key>REACT_NATIVE_DEVICE_ACTIVITY_APP_GROUP</key>
+	<string>group.org.reactjs.native.example.ParentKey</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>

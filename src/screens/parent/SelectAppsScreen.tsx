@@ -11,6 +11,8 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Feather from 'react-native-vector-icons/Feather';
 import { AuthButton, AuthTextInput, ScreenLayout } from '../../components';
+import { IOSScreenTimeAuthSection } from '../../components/ios/IOSScreenTimeAuthSection';
+import { IOSScreenTimePanel } from '../../components/ios/IOSScreenTimePanel';
 import { ScreenHeader } from '../../components/parent';
 import {
   APP_CATEGORY_FILTERS,
@@ -21,6 +23,7 @@ import {
   filterInstalledApps,
   getSocialApps,
 } from '../../lib/installedApps';
+import type { IOSScreenTimeAuthorizationStatus } from '../../lib/iosScreenTime';
 import { useTheme } from '../../context/ThemeContext';
 import type { ControlsStackParamList } from '../../navigation/types';
 import type { AppCategoryFilter, InstalledApp } from '../../types/installedApp';
@@ -39,6 +42,9 @@ export function SelectAppsScreen({ navigation, route }: Props) {
   const [categoryFilter, setCategoryFilter] =
     useState<AppCategoryFilter>('all');
   const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
+  const [authStatus, setAuthStatus] =
+    useState<IOSScreenTimeAuthorizationStatus>('notDetermined');
+  const authApproved = authStatus === 'approved';
 
   const socialApps = useMemo(() => getSocialApps(apps), [apps]);
 
@@ -175,15 +181,18 @@ export function SelectAppsScreen({ navigation, route }: Props) {
           <Text style={styles.stateText}>Scanning installed apps...</Text>
         </View>
       ) : iosRequiresFamilyPicker ? (
-        <View style={styles.centerState}>
-          <Feather color={colors.text.brand} name="smartphone" size={32} />
-          <Text style={styles.stateTitle}>iOS uses Apple&apos;s app picker</Text>
-          <Text style={styles.stateText}>
-            Apple does not allow third-party apps to list every installed app.
-            On the child&apos;s iPhone, we will use Screen Time&apos;s native app
-            picker instead.
-          </Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.iosPanelContent}
+          showsVerticalScrollIndicator={false}
+          style={styles.iosPanel}>
+          <IOSScreenTimeAuthSection onStatusChange={setAuthStatus} />
+          <IOSScreenTimePanel
+            authApproved={authApproved}
+            mode={mode}
+            showChildDeviceNote
+            stepOffset={1}
+          />
+        </ScrollView>
       ) : error ? (
         <View style={styles.centerState}>
           <Text style={styles.stateTitle}>Could not scan apps</Text>
@@ -230,6 +239,13 @@ function createStyles(colors: ColorPalette) {
     layout: {
       flex: 1,
       paddingHorizontal: 0,
+    },
+    iosPanel: {
+      flex: 1,
+    },
+    iosPanelContent: {
+      gap: spacing.md,
+      paddingBottom: spacing.lg,
     },
     headerSection: {
       gap: spacing.md,

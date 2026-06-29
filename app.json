@@ -1,4 +1,15 @@
 {
   "name": "ParentKey",
-  "displayName": "ParentKey"
+  "displayName": "ParentKey",
+  "ios": {
+    "bundleIdentifier": "org.reactjs.native.example.ParentKey"
+  },
+  "plugins": [
+    [
+      "react-native-device-activity",
+      {
+        "appGroup": "group.org.reactjs.native.example.ParentKey"
+      }
+    ]
+  ]
 }
