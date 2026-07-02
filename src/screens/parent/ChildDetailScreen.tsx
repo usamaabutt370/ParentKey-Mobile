@@ -1,12 +1,27 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { InfoTipCard, ScreenHeader } from '../../components/parent';
-import { ScreenLayout } from '../../components';
+import {
+  BlockedAppRow,
+  InfoTipCard,
+  ScreenHeader,
+} from '../../components/parent';
+import { AuthButton, ScreenLayout } from '../../components';
 import { getChildAvatar } from '../../constants/childAvatars';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import {
+  fetchChildBlockRules,
+  removeChildBlockRule,
+  type AppBlockRule,
+} from '../../lib/appRules';
 import { fetchChildById, getChildDisplayName } from '../../lib/children';
 import type { ChildrenStackParamList } from '../../navigation/types';
 import type { ChildProfile } from '../../types/child';
@@ -29,14 +44,19 @@ export function ChildDetailScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [child, setChild] = useState<ChildProfile | null>(null);
+  const [blockRules, setBlockRules] = useState<AppBlockRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [unblockingPackage, setUnblockingPackage] = useState<string | null>(
+    null,
+  );
 
   const loadChild = useCallback(async () => {
     const parentId = session?.user.id;
 
     if (!parentId) {
       setChild(null);
+      setBlockRules([]);
       setError('You must be signed in to view child details.');
       setLoading(false);
       return;
@@ -45,13 +65,22 @@ export function ChildDetailScreen({ navigation, route }: Props) {
     setLoading(true);
     setError(null);
 
-    const result = await fetchChildById(parentId, childId);
+    const [childResult, rulesResult] = await Promise.all([
+      fetchChildById(parentId, childId),
+      fetchChildBlockRules(childId),
+    ]);
 
-    if (result.ok) {
-      setChild(result.child);
+    if (childResult.ok) {
+      setChild(childResult.child);
     } else {
       setChild(null);
-      setError(result.message);
+      setError(childResult.message);
+    }
+
+    if (rulesResult.ok) {
+      setBlockRules(rulesResult.rules);
+    } else if (childResult.ok) {
+      setBlockRules([]);
     }
 
     setLoading(false);
@@ -62,6 +91,55 @@ export function ChildDetailScreen({ navigation, route }: Props) {
       void loadChild();
     }, [loadChild]),
   );
+
+  const handleUnblock = (rule: AppBlockRule) => {
+    const parentId = session?.user.id;
+    if (!parentId) {
+      return;
+    }
+
+    const displayName = rule.appName ?? rule.packageName;
+
+    Alert.alert(
+      'Unblock app',
+      `Allow ${displayName} on this child's device?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unblock',
+          onPress: () => {
+            void (async () => {
+              setUnblockingPackage(rule.packageName);
+
+              const result = await removeChildBlockRule({
+                parentId,
+                childId,
+                packageName: rule.packageName,
+              });
+
+              setUnblockingPackage(null);
+
+              if (!result.ok) {
+                Alert.alert('Could not unblock', result.message);
+                return;
+              }
+
+              setBlockRules(current =>
+                current.filter(item => item.packageName !== rule.packageName),
+              );
+            })();
+          },
+        },
+      ],
+    );
+  };
+
+  const handleManageBlocks = () => {
+    navigation.getParent()?.navigate('Controls', {
+      screen: 'SelectApps',
+      params: { mode: 'block', childId },
+    });
+  };
 
   const avatar = getChildAvatar(child?.avatarId ?? undefined);
   const displayName = child ? getChildDisplayName(child) : 'Child';
@@ -117,8 +195,28 @@ export function ChildDetailScreen({ navigation, route }: Props) {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Activity</Text>
-            <InfoTipCard message="Screen time and device status will appear here once the child signs in on their device." />
+            <Text style={styles.sectionTitle}>Blocked apps</Text>
+            {blockRules.length === 0 ? (
+              <InfoTipCard message="No apps are blocked for this child yet. Block apps from Controls or tap the button below." />
+            ) : (
+              <View style={styles.blockedList}>
+                {blockRules.map(rule => (
+                  <BlockedAppRow
+                    key={rule.id}
+                    onUnblock={() => handleUnblock(rule)}
+                    rule={rule}
+                    unblocking={unblockingPackage === rule.packageName}
+                  />
+                ))}
+              </View>
+            )}
+            <AuthButton
+              onPress={handleManageBlocks}
+              title={
+                blockRules.length === 0 ? 'Block apps' : 'Manage blocked apps'
+              }
+              variant={blockRules.length === 0 ? 'primary' : 'secondary'}
+            />
           </View>
         </>
       ) : null}
@@ -226,6 +324,9 @@ function createStyles(colors: ColorPalette) {
       ...typography.label,
       color: colors.text.primary,
       fontSize: 18,
+    },
+    blockedList: {
+      gap: spacing.sm,
     },
   });
 }

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">ParentKey</string>
+    <string name="accessibility_service_description">ParentKey shows a lock screen over blocked apps so your child cannot use them. Enable this accessibility service for app blocking to work.</string>
 </resources>

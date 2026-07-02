@@ -25,15 +25,19 @@ export type ChildrenStackParamList = {
 
 export type ControlsStackParamList = {
   ControlsList: undefined;
+  SelectChild: {
+    mode: 'block' | 'limit';
+  };
   SelectApps: {
     mode: 'block' | 'limit';
+    childId: string;
   };
 };
 
 export type ParentTabParamList = {
   Home: undefined;
   Children: NavigatorScreenParams<ChildrenStackParamList> | undefined;
-  Controls: undefined;
+  Controls: NavigatorScreenParams<ControlsStackParamList> | undefined;
   Reports: undefined;
   Settings: undefined;
 };
