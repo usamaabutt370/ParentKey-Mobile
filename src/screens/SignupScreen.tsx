@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   AuthButton,
   AuthTextInput,
-  RoleSelector,
   ScreenLayout,
   Spacer,
 } from '../components';
@@ -12,9 +11,8 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { isValidEmail } from '../lib/auth';
 import type { AuthStackParamList } from '../navigation/types';
-import type { UserRole } from '../types/auth';
 import type { ColorPalette } from '../theme/colors';
-import {  spacing, typography } from '../theme';
+import { spacing, typography } from '../theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Signup'>;
 
@@ -26,11 +24,10 @@ type FieldErrors = {
   confirmPassword?: string;
 };
 
-export function SignupScreen({ navigation, route }: Props) {
+export function SignupScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { signUp } = useAuth();
-  const [role, setRole] = useState<UserRole>(route.params?.role ?? 'parent');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -39,12 +36,6 @@ export function SignupScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (route.params?.role) {
-      setRole(route.params.role);
-    }
-  }, [route.params?.role]);
 
   const clearFieldError = (field: keyof FieldErrors) => {
     setFieldErrors(current =>
@@ -99,7 +90,6 @@ export function SignupScreen({ navigation, route }: Props) {
       password,
       firstName,
       lastName,
-      role,
     });
     setLoading(false);
 
@@ -116,15 +106,14 @@ export function SignupScreen({ navigation, route }: Props) {
       <View style={styles.header}>
         <Text style={styles.brand}>ParentKey</Text>
         <Spacer.Column numberOfSpaces={14} />
-        <Text style={styles.title}>Create account</Text>
+        <Text style={styles.title}>Create parent account</Text>
         <Text style={styles.subtitle}>
-          Sign up with your email to get started
+          Sign up to manage your family. Child accounts are created from the
+          Children tab after you sign in.
         </Text>
       </View>
 
       <View>
-        <RoleSelector onChange={setRole} value={role} />
-        <Spacer.Column numberOfSpaces={8} />
         <AuthTextInput
           autoCapitalize="words"
           autoComplete="name-given"
@@ -215,41 +204,41 @@ export function SignupScreen({ navigation, route }: Props) {
 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
-  header: {
-    gap: spacing.sm,
-  },
-  brand: {
-    color: colors.text.brand,
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  title: {
-    ...typography.title,
-    color: colors.text.primary,
-  },
-  subtitle: {
-    ...typography.subtitle,
-    color: colors.text.secondary,
-  },
-  formError: {
-    color: colors.error,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  footer: {
-    gap: spacing.md,
-    marginTop: 'auto',
-    paddingBottom: spacing.sm,
-  },
-  footerText: {
-    color: colors.text.secondary,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  footerLink: {
+    header: {
+      gap: spacing.sm,
+    },
+    brand: {
+      color: colors.text.brand,
+      fontSize: 20,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    title: {
+      ...typography.title,
+      color: colors.text.primary,
+    },
+    subtitle: {
+      ...typography.subtitle,
+      color: colors.text.secondary,
+    },
+    formError: {
+      color: colors.error,
+      fontSize: 14,
+      textAlign: 'center',
+    },
+    footer: {
+      gap: spacing.md,
+      marginTop: 'auto',
+      paddingBottom: spacing.sm,
+    },
+    footerText: {
+      color: colors.text.secondary,
+      fontSize: 14,
+      textAlign: 'center',
+    },
+    footerLink: {
       color: colors.text.brand,
       fontWeight: '600',
     },
   });
-} 
+}

@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,7 +20,13 @@ import {
   APP_CATEGORY_FILTERS,
   APP_CATEGORY_LABELS,
 } from '../../constants/appCategories';
+import { useAuth } from '../../context/AuthContext';
 import { useInstalledApps } from '../../hooks/useInstalledApps';
+import {
+  fetchChildBlockRules,
+  fetchChildInstalledApps,
+  saveChildBlockRules,
+} from '../../lib/appRules';
 import {
   filterInstalledApps,
   getSocialApps,
@@ -26,18 +34,37 @@ import {
 import type { IOSScreenTimeAuthorizationStatus } from '../../lib/iosScreenTime';
 import { useTheme } from '../../context/ThemeContext';
 import type { ControlsStackParamList } from '../../navigation/types';
-import type { AppCategoryFilter, InstalledApp } from '../../types/installedApp';
+import type { AppCategory, AppCategoryFilter, InstalledApp } from '../../types/installedApp';
 import type { ColorPalette } from '../../theme/colors';
 import { radii, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<ControlsStackParamList, 'SelectApps'>;
 
+function mapChildAppRecord(app: {
+  packageName: string;
+  appName: string;
+  isSystemApp: boolean;
+  category: AppCategory | null;
+}): InstalledApp {
+  return {
+    id: app.packageName,
+    name: app.appName,
+    packageName: app.packageName,
+    isSystemApp: app.isSystemApp,
+    category: app.category ?? 'other',
+  };
+}
+
 export function SelectAppsScreen({ navigation, route }: Props) {
-  const { mode } = route.params;
+  const { mode, childId } = route.params;
+  const { session } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { apps, loading, error, iosRequiresFamilyPicker, refresh } =
-    useInstalledApps();
+  const localAppsState = useInstalledApps();
+  const [childApps, setChildApps] = useState<InstalledApp[]>([]);
+  const [childAppsLoading, setChildAppsLoading] = useState(true);
+  const [childAppsError, setChildAppsError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] =
     useState<AppCategoryFilter>('all');
@@ -45,6 +72,50 @@ export function SelectAppsScreen({ navigation, route }: Props) {
   const [authStatus, setAuthStatus] =
     useState<IOSScreenTimeAuthorizationStatus>('notDetermined');
   const authApproved = authStatus === 'approved';
+
+  const useChildInventory = Platform.OS !== 'ios';
+  const apps = useChildInventory ? childApps : localAppsState.apps;
+  const loading = useChildInventory ? childAppsLoading : localAppsState.loading;
+  const error = useChildInventory ? childAppsError : localAppsState.error;
+  const iosRequiresFamilyPicker = !useChildInventory && localAppsState.iosRequiresFamilyPicker;
+
+  const loadChildApps = useCallback(async () => {
+    setChildAppsLoading(true);
+    setChildAppsError(null);
+
+    const [appsResult, rulesResult] = await Promise.all([
+      fetchChildInstalledApps(childId),
+      fetchChildBlockRules(childId),
+    ]);
+
+    if (!appsResult.ok) {
+      setChildApps([]);
+      setChildAppsError(appsResult.message);
+      setChildAppsLoading(false);
+      return;
+    }
+
+    const mappedApps = appsResult.apps.map(mapChildAppRecord);
+    setChildApps(mappedApps);
+
+    if (rulesResult.ok) {
+      setSelectedAppIds(rulesResult.rules.map(rule => rule.packageName));
+    }
+
+    if (mappedApps.length === 0) {
+      setChildAppsError(
+        'No apps uploaded yet. Ask your child to sign in on their Android device and tap Sync apps and rules.',
+      );
+    }
+
+    setChildAppsLoading(false);
+  }, [childId]);
+
+  useEffect(() => {
+    if (useChildInventory) {
+      void loadChildApps();
+    }
+  }, [loadChildApps, useChildInventory]);
 
   const socialApps = useMemo(() => getSocialApps(apps), [apps]);
 
@@ -66,8 +137,53 @@ export function SelectAppsScreen({ navigation, route }: Props) {
     setCategoryFilter('social');
   };
 
-  const handleContinue = () => {
-    navigation.goBack();
+  const handleContinue = async () => {
+    if (mode === 'limit' && Platform.OS === 'android') {
+      Alert.alert(
+        'Coming soon',
+        'Daily app limits on Android are not available yet. Use Block apps for now.',
+      );
+      return;
+    }
+
+    if (mode !== 'block' || !useChildInventory) {
+      navigation.goBack();
+      return;
+    }
+
+    const parentId = session?.user.id;
+    if (!parentId) {
+      Alert.alert('Sign in required', 'Please sign in again as a parent.');
+      return;
+    }
+
+    setSaving(true);
+
+    const selectedApps = apps
+      .filter(app => selectedAppIds.includes(app.id))
+      .map(app => ({
+        packageName: app.packageName,
+        appName: app.name,
+      }));
+
+    const result = await saveChildBlockRules({
+      parentId,
+      childId,
+      apps: selectedApps,
+    });
+
+    setSaving(false);
+
+    if (!result.ok) {
+      Alert.alert('Could not save', result.message);
+      return;
+    }
+
+    Alert.alert(
+      'Blocks saved',
+      'Blocked apps were saved. They will apply on the child device within a few seconds.',
+      [{ text: 'OK', onPress: () => navigation.popToTop() }],
+    );
   };
 
   const renderApp = ({ item }: { item: InstalledApp }) => {
@@ -117,15 +233,15 @@ export function SelectAppsScreen({ navigation, route }: Props) {
           onBack={() => navigation.goBack()}
           subtitle={
             mode === 'block'
-              ? 'Scan this device and choose apps to block'
-              : 'Scan this device and choose apps to limit'
+              ? "Choose apps to block on your child's Android device"
+              : "Choose apps to limit on your child's device"
           }
           title="Select apps"
         />
         {!iosRequiresFamilyPicker && !loading && !error ? (
           <Text style={styles.scanSummary}>
-            Found {apps.length} launchable apps on this device, including system
-            and third-party apps.
+            Found {apps.length} apps from your child&apos;s device
+            {mode === 'block' ? ' — select apps to block' : ''}.
           </Text>
         ) : null}
         {!iosRequiresFamilyPicker ? (
@@ -178,7 +294,11 @@ export function SelectAppsScreen({ navigation, route }: Props) {
       {loading ? (
         <View style={styles.centerState}>
           <ActivityIndicator color={colors.brand.tealLight} size="large" />
-          <Text style={styles.stateText}>Scanning installed apps...</Text>
+          <Text style={styles.stateText}>
+            {useChildInventory
+              ? 'Loading apps from child device...'
+              : 'Scanning installed apps...'}
+          </Text>
         </View>
       ) : iosRequiresFamilyPicker ? (
         <ScrollView
@@ -195,9 +315,16 @@ export function SelectAppsScreen({ navigation, route }: Props) {
         </ScrollView>
       ) : error ? (
         <View style={styles.centerState}>
-          <Text style={styles.stateTitle}>Could not scan apps</Text>
+          <Text style={styles.stateTitle}>Could not load apps</Text>
           <Text style={styles.stateText}>{error}</Text>
-          <AuthButton onPress={() => void refresh()} title="Try again" />
+          {useChildInventory ? (
+            <AuthButton onPress={() => void loadChildApps()} title="Try again" />
+          ) : (
+            <AuthButton
+              onPress={() => void localAppsState.refresh()}
+              title="Try again"
+            />
+          )}
         </View>
       ) : (
         <FlatList
@@ -225,8 +352,9 @@ export function SelectAppsScreen({ navigation, route }: Props) {
           </Text>
           <AuthButton
             disabled={selectedAppIds.length === 0}
-            onPress={handleContinue}
-            title="Save selection"
+            loading={saving}
+            onPress={() => void handleContinue()}
+            title={mode === 'block' ? 'Save blocked apps' : 'Save selection'}
           />
         </View>
       ) : null}

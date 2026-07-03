@@ -1,6 +1,5 @@
 import { supabase } from './supabase';
 import { PASSWORD_RESET_REDIRECT_URL } from '../constants/auth';
-import type { UserRole } from '../types/auth';
 
 export type AuthActionResult =
   | { ok: true }
@@ -11,7 +10,6 @@ export type SignUpParams = {
   password: string;
   firstName: string;
   lastName: string;
-  role: UserRole;
 };
 
 export type SignUpResult =
@@ -29,7 +27,6 @@ export async function signUpUser({
   password,
   firstName,
   lastName,
-  role,
 }: SignUpParams): Promise<SignUpResult> {
   const trimmedEmail = email.trim().toLowerCase();
   const trimmedFirstName = firstName.trim();
@@ -47,7 +44,7 @@ export async function signUpUser({
         first_name: trimmedFirstName,
         last_name: trimmedLastName,
         full_name: `${trimmedFirstName} ${trimmedLastName}`,
-        role,
+        role: 'parent',
       },
     },
   });

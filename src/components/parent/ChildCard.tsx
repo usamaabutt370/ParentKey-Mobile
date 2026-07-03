@@ -1,58 +1,65 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Feather from 'react-native-vector-icons/Feather';
+import { getChildAvatar } from '../../constants/childAvatars';
 import { useTheme } from '../../context/ThemeContext';
-import type { MockChild } from '../../constants/mockParentData';
+import { getChildDisplayName } from '../../lib/children';
+import type { ChildProfile } from '../../types/child';
 import type { ColorPalette } from '../../theme/colors';
 import { radii, spacing, typography } from '../../theme';
 
-const STATUS_LABELS: Record<MockChild['status'], string> = {
-  online: 'Online',
-  offline: 'Offline',
-  locked: 'Locked',
-};
-
 type ChildCardProps = {
-  child: MockChild;
+  child: ChildProfile;
+  onPress?: () => void;
 };
 
-export function ChildCard({ child }: ChildCardProps) {
+export function ChildCard({ child, onPress }: ChildCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const statusColor = getStatusColor(colors, child.status);
+  const avatar = getChildAvatar(child.avatarId ?? undefined);
+  const displayName = getChildDisplayName(child);
+  const subtitle = child.email ?? 'Linked account';
+  const meta =
+    child.age != null ? `${child.age} years old` : 'Account linked';
 
-  return (
-    <View style={styles.card}>
+  const content = (
+    <>
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{child.name.charAt(0)}</Text>
+        <View
+          style={[
+            styles.avatar,
+            { backgroundColor: avatar?.background ?? colors.background.accentStrong },
+          ]}>
+          <Text style={styles.avatarText}>
+            {avatar?.emoji ?? displayName.charAt(0).toUpperCase()}
+          </Text>
         </View>
         <View style={styles.info}>
-          <Text style={styles.name}>{child.name}</Text>
-          <View style={styles.statusRow}>
-            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-            <Text style={[styles.status, { color: statusColor }]}>
-              {STATUS_LABELS[child.status]}
-            </Text>
-          </View>
+          <Text style={styles.name}>{displayName}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
-        <Text style={styles.screenTime}>{child.screenTimeToday}</Text>
+        <View style={styles.metaColumn}>
+          <Text style={styles.meta}>{meta}</Text>
+          {onPress ? (
+            <Feather color={colors.text.placeholder} name="chevron-right" size={18} />
+          ) : null}
+        </View>
       </View>
-      {child.currentApp ? (
-        <Text style={styles.currentApp}>Using {child.currentApp}</Text>
-      ) : null}
-    </View>
+    </>
   );
-}
 
-function getStatusColor(colors: ColorPalette, status: MockChild['status']) {
-  switch (status) {
-    case 'online':
-      return colors.success;
-    case 'locked':
-      return colors.error;
-    default:
-      return colors.text.placeholder;
+  if (onPress) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
+        {content}
+      </Pressable>
+    );
   }
+
+  return <View style={styles.card}>{content}</View>;
 }
 
 function createStyles(colors: ColorPalette) {
@@ -62,8 +69,10 @@ function createStyles(colors: ColorPalette) {
       borderColor: colors.border.default,
       borderRadius: radii.lg,
       borderWidth: 1,
-      gap: spacing.sm,
       padding: spacing.md,
+    },
+    cardPressed: {
+      opacity: 0.88,
     },
     header: {
       alignItems: 'center',
@@ -72,16 +81,13 @@ function createStyles(colors: ColorPalette) {
     },
     avatar: {
       alignItems: 'center',
-      backgroundColor: colors.background.accentStrong,
       borderRadius: radii.pill,
       height: 44,
       justifyContent: 'center',
       width: 44,
     },
     avatarText: {
-      ...typography.label,
-      color: colors.text.brand,
-      fontSize: 18,
+      fontSize: 22,
     },
     info: {
       flex: 1,
@@ -92,27 +98,18 @@ function createStyles(colors: ColorPalette) {
       color: colors.text.primary,
       fontSize: 16,
     },
-    statusRow: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      gap: spacing.xs,
-    },
-    statusDot: {
-      borderRadius: radii.pill,
-      height: 8,
-      width: 8,
-    },
-    status: {
-      ...typography.caption,
-      fontWeight: '600',
-    },
-    screenTime: {
-      ...typography.label,
-      color: colors.text.brand,
-    },
-    currentApp: {
+    subtitle: {
       ...typography.caption,
       color: colors.text.secondary,
+    },
+    metaColumn: {
+      alignItems: 'flex-end',
+      gap: spacing.xs,
+    },
+    meta: {
+      ...typography.caption,
+      color: colors.text.brand,
+      fontWeight: '600',
     },
   });
 }

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text } from 'react-native';
+import { AndroidAppBlockingPanel } from '../components/android/AndroidAppBlockingPanel';
 import { AuthButton, ScreenLayout, useScreenStyles } from '../components';
 import { IOSScreenTimeAuthSection } from '../components/ios/IOSScreenTimeAuthSection';
 import { IOSScreenTimePanel } from '../components/ios/IOSScreenTimePanel';
 import { InfoTipCard } from '../components/parent';
 import { useAuth } from '../context/AuthContext';
+import { useChildAppBlocking } from '../hooks/useChildAppBlocking';
 import type { IOSScreenTimeAuthorizationStatus } from '../lib/iosScreenTime';
 import { USER_ROLE_LABELS } from '../types/auth';
 import { spacing } from '../theme';
@@ -16,6 +18,7 @@ export function ChildHomeScreen() {
   const [authStatus, setAuthStatus] =
     useState<IOSScreenTimeAuthorizationStatus>('notDetermined');
   const authApproved = authStatus === 'approved';
+  const androidBlocking = useChildAppBlocking();
 
   return (
     <ScreenLayout>
@@ -40,7 +43,18 @@ export function ChildHomeScreen() {
             <IOSScreenTimePanel authApproved={authApproved} mode="limit" stepOffset={1} />
           </>
         ) : (
-          <InfoTipCard message="App controls on Android are managed from your parent's Controls tab after apps are scanned on this device." />
+          <>
+            <Text style={screenStyles.subtitle}>App blocking</Text>
+            <AndroidAppBlockingPanel
+              accessibilityEnabled={androidBlocking.accessibilityEnabled}
+              blockedCount={androidBlocking.blockedCount}
+              error={androidBlocking.error}
+              lastSyncedAt={androidBlocking.lastSyncedAt}
+              onRefreshAccessibility={androidBlocking.refreshAccessibilityStatus}
+              onSyncNow={androidBlocking.syncNow}
+              syncing={androidBlocking.syncing}
+            />
+          </>
         )}
 
         <AuthButton onPress={signOut} title="Sign out" variant="secondary" />

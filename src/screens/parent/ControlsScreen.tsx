@@ -1,46 +1,21 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthButton, ScreenLayout, useScreenStyles } from '../../components';
-import { SectionHeader } from '../../components/parent';
+import { ActiveBlockRuleCard, SectionHeader } from '../../components/parent';
 import { useTheme } from '../../context/ThemeContext';
+import { useParentBlockRules } from '../../hooks/useParentBlockRules';
 import type { ControlsStackParamList } from '../../navigation/types';
 import type { ColorPalette } from '../../theme/colors';
-import { radii, spacing, typography } from '../../theme';
+import { spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<ControlsStackParamList, 'ControlsList'>;
-
-const MOCK_CONTROLS = [
-  {
-    id: '1',
-    title: 'Daily screen time',
-    description: '2h limit for Emma on weekdays',
-    enabled: true,
-  },
-  {
-    id: '2',
-    title: 'Bedtime',
-    description: '9:00 PM – 7:00 AM for all children',
-    enabled: true,
-  },
-  {
-    id: '3',
-    title: 'Blocked apps',
-    description: 'TikTok, Snapchat blocked for Liam',
-    enabled: true,
-  },
-  {
-    id: '4',
-    title: 'Instant lock',
-    description: "Liam's device is locked",
-    enabled: false,
-  },
-];
 
 export function ParentControlsScreen({ navigation }: Props) {
   const screenStyles = useScreenStyles();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { summaries, loading, error } = useParentBlockRules();
 
   return (
     <ScreenLayout
@@ -56,43 +31,55 @@ export function ParentControlsScreen({ navigation }: Props) {
 
       <View style={styles.actions}>
         <AuthButton
-          onPress={() => navigation.navigate('SelectApps', { mode: 'block' })}
+          onPress={() => navigation.navigate('SelectChild', { mode: 'block' })}
           title="Block apps"
         />
         <AuthButton
-          onPress={() => navigation.navigate('SelectApps', { mode: 'limit' })}
+          onPress={() => navigation.navigate('SelectChild', { mode: 'limit' })}
           title="Set app limits"
           variant="secondary"
         />
       </View>
 
       <View style={styles.section}>
-        <SectionHeader title="Active rules" actionLabel="Add rule" />
-        <View style={styles.ruleList}>
-          {MOCK_CONTROLS.map(rule => (
-            <View key={rule.id} style={styles.ruleCard}>
-              <View style={styles.ruleHeader}>
-                <Text style={styles.ruleTitle}>{rule.title}</Text>
-                <View
-                  style={[
-                    styles.badge,
-                    rule.enabled ? styles.badgeActive : styles.badgeInactive,
-                  ]}>
-                  <Text
-                    style={[
-                      styles.badgeText,
-                      rule.enabled
-                        ? styles.badgeTextActive
-                        : styles.badgeTextInactive,
-                    ]}>
-                    {rule.enabled ? 'Active' : 'Inactive'}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.ruleDescription}>{rule.description}</Text>
-            </View>
-          ))}
-        </View>
+        <SectionHeader
+          actionLabel="Block apps"
+          onActionPress={() =>
+            navigation.navigate('SelectChild', { mode: 'block' })
+          }
+          title="Active rules"
+        />
+        {loading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator color={colors.brand.tealLight} size="large" />
+          </View>
+        ) : error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : summaries.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>No active block rules</Text>
+            <Text style={styles.emptyBody}>
+              Block apps for a child and they will appear here. Your child must
+              be signed in on their Android device for rules to apply.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.ruleList}>
+            {summaries.map(summary => (
+              <ActiveBlockRuleCard
+                childName={summary.childName}
+                key={summary.childId}
+                onPress={() =>
+                  navigation.navigate('SelectApps', {
+                    mode: 'block',
+                    childId: summary.childId,
+                  })
+                }
+                rules={summary.rules}
+              />
+            ))}
+          </View>
+        )}
       </View>
     </ScreenLayout>
   );
@@ -112,48 +99,30 @@ function createStyles(colors: ColorPalette) {
     ruleList: {
       gap: spacing.sm,
     },
-    ruleCard: {
+    centered: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.xl,
+    },
+    errorText: {
+      ...typography.body,
+      color: colors.error,
+    },
+    emptyCard: {
       backgroundColor: colors.input.background,
       borderColor: colors.border.default,
-      borderRadius: radii.lg,
+      borderRadius: 12,
       borderWidth: 1,
-      gap: spacing.xs,
-      padding: spacing.md,
+      gap: spacing.sm,
+      padding: spacing.lg,
     },
-    ruleHeader: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-    },
-    ruleTitle: {
+    emptyTitle: {
       ...typography.label,
       color: colors.text.primary,
-      flex: 1,
       fontSize: 16,
     },
-    badge: {
-      borderRadius: radii.pill,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs,
-    },
-    badgeActive: {
-      backgroundColor: colors.background.accent,
-    },
-    badgeInactive: {
-      backgroundColor: colors.border.default,
-    },
-    badgeText: {
-      ...typography.caption,
-      fontWeight: '600',
-    },
-    badgeTextActive: {
-      color: colors.text.brand,
-    },
-    badgeTextInactive: {
-      color: colors.text.placeholder,
-    },
-    ruleDescription: {
-      ...typography.caption,
+    emptyBody: {
+      ...typography.body,
       color: colors.text.secondary,
     },
   });

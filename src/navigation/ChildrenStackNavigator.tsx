@@ -1,6 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ParentChildrenScreen } from '../screens/parent/ChildrenScreen';
+import { ChildDetailScreen } from '../screens/parent/ChildDetailScreen';
 import {
   AddChildAccountScreen,
   AddChildProfileScreen,
@@ -14,6 +15,7 @@ export function ChildrenStackNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen component={ParentChildrenScreen} name="ChildrenList" />
+      <Stack.Screen component={ChildDetailScreen} name="ChildDetail" />
       <Stack.Screen component={AddChildProfileScreen} name="AddChildProfile" />
       <Stack.Screen component={AddChildAccountScreen} name="AddChildAccount" />
       <Stack.Screen component={AddChildSuccessScreen} name="AddChildSuccess" />
