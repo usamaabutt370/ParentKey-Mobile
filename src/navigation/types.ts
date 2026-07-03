@@ -1,10 +1,9 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
-import type { UserRole } from '../types/auth';
 import type { ChildProfileDraft } from '../types/child';
 
 export type AuthStackParamList = {
   Login: undefined;
-  Signup: { role?: UserRole } | undefined;
+  Signup: undefined;
   ForgotPassword: undefined;
 };
 
