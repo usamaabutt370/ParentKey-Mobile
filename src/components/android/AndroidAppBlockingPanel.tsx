@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { AppState, StyleSheet, Text, View } from 'react-native';
+import { ChildDeviceAppsList } from './ChildDeviceAppsList';
 import { AuthButton } from '../AuthButton';
 import { InfoTipCard } from '../parent/InfoTipCard';
 import { useTheme } from '../../context/ThemeContext';
@@ -7,12 +8,16 @@ import {
   isAndroidAppBlockingSupported,
   openAccessibilitySettings,
 } from '../../lib/androidAppBlocking';
+import type { InstalledApp } from '../../types/installedApp';
 import type { ColorPalette } from '../../theme/colors';
 import { spacing, typography } from '../../theme';
 
 type AndroidAppBlockingPanelProps = {
   accessibilityEnabled: boolean;
+  appsLoading: boolean;
   blockedCount: number;
+  blockedPackages: string[];
+  installedApps: InstalledApp[];
   syncing: boolean;
   lastSyncedAt: string | null;
   error: string | null;
@@ -22,7 +27,10 @@ type AndroidAppBlockingPanelProps = {
 
 export function AndroidAppBlockingPanel({
   accessibilityEnabled,
+  appsLoading,
   blockedCount,
+  blockedPackages,
+  installedApps,
   syncing,
   lastSyncedAt,
   error,
@@ -60,7 +68,9 @@ export function AndroidAppBlockingPanel({
 
   return (
     <View style={styles.container}>
-      <InfoTipCard message="Step 1: Enable ParentKey in Android Accessibility settings. Step 2: Keep this app signed in so blocked apps sync from your parent. Blocked apps stay open but show a lock overlay on top." />
+      {!accessibilityEnabled ? (
+        <InfoTipCard message="Step 1: Enable ParentKey in Android Accessibility settings. Step 2: Keep this app signed in so blocked apps sync from your parent. Blocked apps stay open but show a lock overlay on top." />
+      ) : null}
 
       <View style={styles.statusCard}>
         <StatusRow
@@ -99,6 +109,12 @@ export function AndroidAppBlockingPanel({
         onPress={() => void onSyncNow()}
         title="Sync apps and rules"
         variant="primary"
+      />
+
+      <ChildDeviceAppsList
+        apps={installedApps}
+        blockedPackages={blockedPackages}
+        loading={appsLoading || syncing}
       />
     </View>
   );

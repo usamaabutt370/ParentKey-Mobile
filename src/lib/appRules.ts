@@ -18,6 +18,7 @@ export type ChildInstalledAppRecord = {
   appName: string;
   isSystemApp: boolean;
   category: AppCategory | null;
+  iconBase64: string | null;
   scannedAt: string;
 };
 
@@ -56,6 +57,7 @@ type InstalledAppRow = {
   app_name: string;
   is_system_app: boolean;
   category: string | null;
+  icon_base64: string | null;
   scanned_at: string;
 };
 
@@ -91,6 +93,7 @@ function mapInstalledAppRow(row: InstalledAppRow): ChildInstalledAppRecord {
     appName: row.app_name,
     isSystemApp: row.is_system_app,
     category: (row.category as AppCategory | null) ?? null,
+    iconBase64: row.icon_base64,
     scannedAt: row.scanned_at,
   };
 }
@@ -147,6 +150,7 @@ export async function syncChildInstalledApps(params: {
     appName: string;
     isSystemApp: boolean;
     category: AppCategory;
+    iconBase64?: string | null;
   }>;
 }): Promise<{ ok: true } | { ok: false; message: string }> {
   const scannedAt = new Date().toISOString();
@@ -157,6 +161,7 @@ export async function syncChildInstalledApps(params: {
     app_name: app.appName,
     is_system_app: app.isSystemApp,
     category: app.category,
+    icon_base64: app.iconBase64 ?? null,
     scanned_at: scannedAt,
   }));
 
@@ -184,7 +189,7 @@ export async function fetchChildInstalledApps(
   const { data, error } = await supabase
     .from('child_installed_apps')
     .select(
-      'id, child_id, device_id, package_name, app_name, is_system_app, category, scanned_at',
+      'id, child_id, device_id, package_name, app_name, is_system_app, category, icon_base64, scanned_at',
     )
     .eq('child_id', childId)
     .order('app_name', { ascending: true });

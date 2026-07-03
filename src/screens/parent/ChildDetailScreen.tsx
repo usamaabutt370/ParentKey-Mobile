@@ -19,10 +19,16 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import {
   fetchChildBlockRules,
+  fetchChildInstalledApps,
   removeChildBlockRule,
   type AppBlockRule,
 } from '../../lib/appRules';
 import { fetchChildById, getChildDisplayName, deleteChildAccount } from '../../lib/children';
+import {
+  buildAppIconLookup,
+  mergeInstalledAppIcons,
+  type AppIconData,
+} from '../../lib/installedApps';
 import type { ChildrenStackParamList } from '../../navigation/types';
 import type { ChildProfile } from '../../types/child';
 import type { ColorPalette } from '../../theme/colors';
@@ -45,6 +51,7 @@ export function ChildDetailScreen({ navigation, route }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [child, setChild] = useState<ChildProfile | null>(null);
   const [blockRules, setBlockRules] = useState<AppBlockRule[]>([]);
+  const [appIcons, setAppIcons] = useState<Map<string, AppIconData>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unblockingPackage, setUnblockingPackage] = useState<string | null>(
@@ -66,9 +73,10 @@ export function ChildDetailScreen({ navigation, route }: Props) {
     setLoading(true);
     setError(null);
 
-    const [childResult, rulesResult] = await Promise.all([
+    const [childResult, rulesResult, installedAppsResult] = await Promise.all([
       fetchChildById(parentId, childId),
       fetchChildBlockRules(childId),
+      fetchChildInstalledApps(childId),
     ]);
 
     if (childResult.ok) {
@@ -82,6 +90,19 @@ export function ChildDetailScreen({ navigation, route }: Props) {
       setBlockRules(rulesResult.rules);
     } else if (childResult.ok) {
       setBlockRules([]);
+    }
+
+    if (installedAppsResult.ok) {
+      const appsWithIcons = await mergeInstalledAppIcons(
+        installedAppsResult.apps.map(app => ({
+          packageName: app.packageName,
+          iconUri: null,
+          iconBase64: app.iconBase64,
+        })),
+      );
+      setAppIcons(buildAppIconLookup(appsWithIcons));
+    } else {
+      setAppIcons(new Map());
     }
 
     setLoading(false);
@@ -239,14 +260,20 @@ export function ChildDetailScreen({ navigation, route }: Props) {
               <InfoTipCard message="No apps are blocked for this child yet. Block apps from Controls or tap the button below." />
             ) : (
               <View style={styles.blockedList}>
-                {blockRules.map(rule => (
-                  <BlockedAppRow
-                    key={rule.id}
-                    onUnblock={() => handleUnblock(rule)}
-                    rule={rule}
-                    unblocking={unblockingPackage === rule.packageName}
-                  />
-                ))}
+                {blockRules.map(rule => {
+                  const icons = appIcons.get(rule.packageName);
+
+                  return (
+                    <BlockedAppRow
+                      iconBase64={icons?.iconBase64}
+                      iconUri={icons?.iconUri}
+                      key={rule.id}
+                      onUnblock={() => handleUnblock(rule)}
+                      rule={rule}
+                      unblocking={unblockingPackage === rule.packageName}
+                    />
+                  );
+                })}
               </View>
             )}
             <AuthButton

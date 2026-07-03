@@ -1,3 +1,4 @@
+export { AppIcon } from './AppIcon';
 export { AuthButton } from './AuthButton';
 export { AuthTextInput } from './AuthTextInput';
 export { RoleSelector } from './RoleSelector';

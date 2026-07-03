@@ -47,8 +47,11 @@ export function ChildHomeScreen() {
             <Text style={screenStyles.subtitle}>App blocking</Text>
             <AndroidAppBlockingPanel
               accessibilityEnabled={androidBlocking.accessibilityEnabled}
+              appsLoading={androidBlocking.appsLoading}
               blockedCount={androidBlocking.blockedCount}
+              blockedPackages={androidBlocking.blockedPackages}
               error={androidBlocking.error}
+              installedApps={androidBlocking.installedApps}
               lastSyncedAt={androidBlocking.lastSyncedAt}
               onRefreshAccessibility={androidBlocking.refreshAccessibilityStatus}
               onSyncNow={androidBlocking.syncNow}

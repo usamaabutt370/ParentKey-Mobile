@@ -11,6 +11,8 @@ type NativeInstalledApp = {
   packageName: string;
   appName: string;
   isSystemApp?: boolean;
+  iconUri?: string | null;
+  iconBase64?: string | null;
 };
 
 type InstalledAppsModule = {
@@ -28,6 +30,8 @@ function mapNativeApp(app: NativeInstalledApp): InstalledApp {
     packageName: app.packageName,
     isSystemApp: app.isSystemApp ?? false,
     category: detectAppCategory(app.packageName, app.appName),
+    iconUri: app.iconUri ?? null,
+    iconBase64: app.iconBase64 ?? null,
   };
 }
 
@@ -91,4 +95,59 @@ export function getAppsByCategory(
 
 export function getSocialApps(apps: InstalledApp[]): InstalledApp[] {
   return getAppsByCategory(apps, 'social');
+}
+
+export type AppIconData = {
+  iconUri?: string | null;
+  iconBase64?: string | null;
+};
+
+type AppWithPackage = {
+  packageName: string;
+  iconUri?: string | null;
+  iconBase64?: string | null;
+};
+
+export async function mergeInstalledAppIcons<T extends AppWithPackage>(
+  apps: T[],
+): Promise<T[]> {
+  if (Platform.OS !== 'android') {
+    return apps;
+  }
+
+  try {
+    const { apps: localApps } = await fetchInstalledApps();
+    const localByPackage = new Map(
+      localApps.map(app => [app.packageName, app]),
+    );
+
+    return apps.map(app => {
+      const local = localByPackage.get(app.packageName);
+      if (!local) {
+        return app;
+      }
+
+      return {
+        ...app,
+        iconUri: app.iconUri ?? local.iconUri ?? null,
+        iconBase64: app.iconBase64 ?? local.iconBase64 ?? null,
+      };
+    });
+  } catch {
+    return apps;
+  }
+}
+
+export function buildAppIconLookup(
+  apps: AppWithPackage[],
+): Map<string, AppIconData> {
+  return new Map(
+    apps.map(app => [
+      app.packageName,
+      {
+        iconUri: app.iconUri ?? null,
+        iconBase64: app.iconBase64 ?? null,
+      },
+    ]),
+  );
 }
