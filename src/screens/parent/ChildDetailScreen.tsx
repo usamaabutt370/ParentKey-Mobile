@@ -22,7 +22,7 @@ import {
   removeChildBlockRule,
   type AppBlockRule,
 } from '../../lib/appRules';
-import { fetchChildById, getChildDisplayName } from '../../lib/children';
+import { fetchChildById, getChildDisplayName, deleteChildAccount } from '../../lib/children';
 import type { ChildrenStackParamList } from '../../navigation/types';
 import type { ChildProfile } from '../../types/child';
 import type { ColorPalette } from '../../theme/colors';
@@ -50,6 +50,7 @@ export function ChildDetailScreen({ navigation, route }: Props) {
   const [unblockingPackage, setUnblockingPackage] = useState<string | null>(
     null,
   );
+  const [deleting, setDeleting] = useState(false);
 
   const loadChild = useCallback(async () => {
     const parentId = session?.user.id;
@@ -141,6 +142,44 @@ export function ChildDetailScreen({ navigation, route }: Props) {
     });
   };
 
+  const handleDeleteChild = () => {
+    const parentId = session?.user.id;
+    if (!parentId || !child) {
+      return;
+    }
+
+    Alert.alert(
+      'Delete child account',
+      `Permanently remove ${getChildDisplayName(child)}'s account? Their blocked apps and device data will be deleted and they will no longer be able to sign in.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              setDeleting(true);
+
+              const result = await deleteChildAccount({
+                parentId,
+                childId,
+              });
+
+              setDeleting(false);
+
+              if (!result.ok) {
+                Alert.alert('Could not delete child', result.message);
+                return;
+              }
+
+              navigation.goBack();
+            })();
+          },
+        },
+      ],
+    );
+  };
+
   const avatar = getChildAvatar(child?.avatarId ?? undefined);
   const displayName = child ? getChildDisplayName(child) : 'Child';
 
@@ -216,6 +255,20 @@ export function ChildDetailScreen({ navigation, route }: Props) {
                 blockRules.length === 0 ? 'Block apps' : 'Manage blocked apps'
               }
               variant={blockRules.length === 0 ? 'primary' : 'secondary'}
+            />
+          </View>
+
+          <View style={styles.dangerSection}>
+            <Text style={styles.dangerTitle}>Danger zone</Text>
+            <Text style={styles.dangerBody}>
+              Deleting this child removes their login, blocked apps, and synced
+              device data. This cannot be undone.
+            </Text>
+            <AuthButton
+              loading={deleting}
+              onPress={handleDeleteChild}
+              title="Delete child account"
+              variant="secondary"
             />
           </View>
         </>
@@ -327,6 +380,20 @@ function createStyles(colors: ColorPalette) {
     },
     blockedList: {
       gap: spacing.sm,
+    },
+    dangerSection: {
+      gap: spacing.sm,
+      marginTop: spacing.md,
+    },
+    dangerTitle: {
+      ...typography.label,
+      color: colors.error,
+      fontSize: 16,
+    },
+    dangerBody: {
+      ...typography.caption,
+      color: colors.text.secondary,
+      lineHeight: 20,
     },
   });
 }

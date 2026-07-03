@@ -98,7 +98,7 @@ export function AndroidAppBlockingPanel({
         loading={syncing}
         onPress={() => void onSyncNow()}
         title="Sync apps and rules"
-        variant={accessibilityEnabled ? 'primary' : 'secondary'}
+        variant="primary"
       />
     </View>
   );

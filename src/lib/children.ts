@@ -13,6 +13,9 @@ type JoinedProfile = {
 type ChildRow = {
   profile_id: string;
   parent_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  full_name: string | null;
   age: number | null;
   avatar_id: string | null;
   created_at: string;
@@ -46,6 +49,9 @@ export function getChildDisplayName(child: ChildProfile): string {
 const CHILD_SELECT = `
   profile_id,
   parent_id,
+  first_name,
+  last_name,
+  full_name,
   age,
   avatar_id,
   created_at,
@@ -64,9 +70,9 @@ function mapChildRow(row: ChildRow): ChildProfile {
   return {
     id: row.profile_id,
     email: profile?.email ?? null,
-    firstName: profile?.first_name ?? null,
-    lastName: profile?.last_name ?? null,
-    fullName: profile?.full_name ?? null,
+    firstName: row.first_name ?? profile?.first_name ?? null,
+    lastName: row.last_name ?? profile?.last_name ?? null,
+    fullName: row.full_name ?? profile?.full_name ?? null,
     parentId: row.parent_id,
     age: row.age,
     avatarId: row.avatar_id as ChildAvatarId | null,
@@ -203,6 +209,44 @@ function mapCreateChildError(message: string): string {
 
   if (lowerMessage.includes('password')) {
     return 'Password does not meet requirements. Use at least 6 characters.';
+  }
+
+  return message;
+}
+
+export async function deleteChildAccount(params: {
+  parentId: string;
+  childId: string;
+}): Promise<{ ok: true } | { ok: false; message: string }> {
+  const verifyResult = await fetchChildById(params.parentId, params.childId);
+
+  if (!verifyResult.ok) {
+    return verifyResult;
+  }
+
+  const { error } = await supabase.rpc('delete_child_account', {
+    target_child_id: params.childId,
+  });
+
+  if (error) {
+    return { ok: false, message: mapDeleteChildError(error.message) };
+  }
+
+  return { ok: true };
+}
+
+function mapDeleteChildError(message: string): string {
+  const lowerMessage = message.toLowerCase();
+
+  if (lowerMessage.includes('permission') || lowerMessage.includes('not found')) {
+    return 'You do not have permission to delete this child account.';
+  }
+
+  if (
+    lowerMessage.includes('delete_child_account') &&
+    lowerMessage.includes('does not exist')
+  ) {
+    return 'Delete is not available yet. Apply the latest database migration and try again.';
   }
 
   return message;
