@@ -12,14 +12,11 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Feather from 'react-native-vector-icons/Feather';
-import { AuthButton, AuthTextInput, ScreenLayout } from '../../components';
+import { AuthButton, AppIcon, ScreenLayout } from '../../components';
 import { IOSScreenTimeAuthSection } from '../../components/ios/IOSScreenTimeAuthSection';
 import { IOSScreenTimePanel } from '../../components/ios/IOSScreenTimePanel';
 import { ScreenHeader } from '../../components/parent';
-import {
-  APP_CATEGORY_FILTERS,
-  APP_CATEGORY_LABELS,
-} from '../../constants/appCategories';
+import { APP_CATEGORY_LABELS } from '../../constants/appCategories';
 import { useAuth } from '../../context/AuthContext';
 import { useInstalledApps } from '../../hooks/useInstalledApps';
 import {
@@ -27,14 +24,11 @@ import {
   fetchChildInstalledApps,
   saveChildBlockRules,
 } from '../../lib/appRules';
-import {
-  filterInstalledApps,
-  getSocialApps,
-} from '../../lib/installedApps';
+import { mergeInstalledAppIcons } from '../../lib/installedApps';
 import type { IOSScreenTimeAuthorizationStatus } from '../../lib/iosScreenTime';
 import { useTheme } from '../../context/ThemeContext';
 import type { ControlsStackParamList } from '../../navigation/types';
-import type { AppCategory, AppCategoryFilter, InstalledApp } from '../../types/installedApp';
+import type { AppCategory, InstalledApp } from '../../types/installedApp';
 import type { ColorPalette } from '../../theme/colors';
 import { radii, spacing, typography } from '../../theme';
 
@@ -45,6 +39,7 @@ function mapChildAppRecord(app: {
   appName: string;
   isSystemApp: boolean;
   category: AppCategory | null;
+  iconBase64?: string | null;
 }): InstalledApp {
   return {
     id: app.packageName,
@@ -52,6 +47,8 @@ function mapChildAppRecord(app: {
     packageName: app.packageName,
     isSystemApp: app.isSystemApp,
     category: app.category ?? 'other',
+    iconUri: null,
+    iconBase64: app.iconBase64 ?? null,
   };
 }
 
@@ -65,9 +62,6 @@ export function SelectAppsScreen({ navigation, route }: Props) {
   const [childAppsLoading, setChildAppsLoading] = useState(true);
   const [childAppsError, setChildAppsError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] =
-    useState<AppCategoryFilter>('all');
   const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
   const [authStatus, setAuthStatus] =
     useState<IOSScreenTimeAuthorizationStatus>('notDetermined');
@@ -96,13 +90,14 @@ export function SelectAppsScreen({ navigation, route }: Props) {
     }
 
     const mappedApps = appsResult.apps.map(mapChildAppRecord);
-    setChildApps(mappedApps);
+    const enrichedApps = await mergeInstalledAppIcons(mappedApps);
+    setChildApps(enrichedApps);
 
     if (rulesResult.ok) {
       setSelectedAppIds(rulesResult.rules.map(rule => rule.packageName));
     }
 
-    if (mappedApps.length === 0) {
+    if (enrichedApps.length === 0) {
       setChildAppsError(
         'No apps uploaded yet. Ask your child to sign in on their Android device and tap Sync apps and rules.',
       );
@@ -117,24 +112,12 @@ export function SelectAppsScreen({ navigation, route }: Props) {
     }
   }, [loadChildApps, useChildInventory]);
 
-  const socialApps = useMemo(() => getSocialApps(apps), [apps]);
-
-  const filteredApps = useMemo(
-    () => filterInstalledApps(apps, searchQuery, categoryFilter),
-    [apps, searchQuery, categoryFilter],
-  );
-
   const toggleApp = (appId: string) => {
     setSelectedAppIds(current =>
       current.includes(appId)
         ? current.filter(id => id !== appId)
         : [...current, appId],
     );
-  };
-
-  const selectSocialApps = () => {
-    setSelectedAppIds(socialApps.map(app => app.id));
-    setCategoryFilter('social');
   };
 
   const handleContinue = async () => {
@@ -179,9 +162,13 @@ export function SelectAppsScreen({ navigation, route }: Props) {
       return;
     }
 
+    const clearedAll = selectedApps.length === 0;
+
     Alert.alert(
-      'Blocks saved',
-      'Blocked apps were saved. They will apply on the child device within a few seconds.',
+      clearedAll ? 'Blocks cleared' : 'Blocks saved',
+      clearedAll
+        ? 'All app blocks were removed. Changes will apply on the child device within a few seconds.'
+        : 'Blocked apps were saved. They will apply on the child device within a few seconds.',
       [{ text: 'OK', onPress: () => navigation.popToTop() }],
     );
   };
@@ -193,11 +180,13 @@ export function SelectAppsScreen({ navigation, route }: Props) {
       <Pressable
         onPress={() => toggleApp(item.id)}
         style={[styles.appRow, isSelected && styles.appRowSelected]}>
-        <View style={styles.appIcon}>
-          <Text style={styles.appIconText}>
-            {item.name.charAt(0).toUpperCase()}
-          </Text>
-        </View>
+        <AppIcon
+          iconBase64={item.iconBase64}
+          iconUri={item.iconUri}
+          name={item.name}
+          packageName={item.packageName}
+          size={44}
+        />
         <View style={styles.appInfo}>
           <View style={styles.nameRow}>
             <Text style={styles.appName}>{item.name}</Text>
@@ -238,57 +227,6 @@ export function SelectAppsScreen({ navigation, route }: Props) {
           }
           title="Select apps"
         />
-        {!iosRequiresFamilyPicker && !loading && !error ? (
-          <Text style={styles.scanSummary}>
-            Found {apps.length} apps from your child&apos;s device
-            {mode === 'block' ? ' — select apps to block' : ''}.
-          </Text>
-        ) : null}
-        {!iosRequiresFamilyPicker ? (
-          <>
-            <AuthTextInput
-              autoCapitalize="none"
-              autoCorrect={false}
-              label="Search apps"
-              onChangeText={setSearchQuery}
-              placeholder="Facebook, Instagram, TikTok..."
-              value={searchQuery}
-            />
-            {socialApps.length > 0 ? (
-              <AuthButton
-                onPress={selectSocialApps}
-                title={`Select social apps (${socialApps.length})`}
-                variant="secondary"
-              />
-            ) : null}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterRow}>
-              {APP_CATEGORY_FILTERS.map(filter => {
-                const isActive = categoryFilter === filter.id;
-
-                return (
-                  <Pressable
-                    key={filter.id}
-                    onPress={() => setCategoryFilter(filter.id)}
-                    style={[
-                      styles.filterChip,
-                      isActive && styles.filterChipActive,
-                    ]}>
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        isActive && styles.filterChipTextActive,
-                      ]}>
-                      {filter.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </>
-        ) : null}
       </View>
 
       {loading ? (
@@ -329,13 +267,11 @@ export function SelectAppsScreen({ navigation, route }: Props) {
       ) : (
         <FlatList
           contentContainerStyle={styles.listContent}
-          data={filteredApps}
+          data={apps}
           keyExtractor={item => item.id}
           ListEmptyComponent={
             <View style={styles.centerState}>
-              <Text style={styles.stateText}>
-                No apps match this filter. Try All apps or search by name.
-              </Text>
+              <Text style={styles.stateText}>No apps found on this device.</Text>
             </View>
           }
           renderItem={renderApp}
@@ -351,10 +287,15 @@ export function SelectAppsScreen({ navigation, route }: Props) {
             selected
           </Text>
           <AuthButton
-            disabled={selectedAppIds.length === 0}
             loading={saving}
             onPress={() => void handleContinue()}
-            title={mode === 'block' ? 'Save blocked apps' : 'Save selection'}
+            title={
+              selectedAppIds.length === 0
+                ? 'Clear all blocks'
+                : mode === 'block'
+                  ? 'Save blocked apps'
+                  : 'Save selection'
+            }
           />
         </View>
       ) : null}
@@ -376,45 +317,17 @@ function createStyles(colors: ColorPalette) {
       paddingBottom: spacing.lg,
     },
     headerSection: {
-      gap: spacing.md,
+      paddingBottom: spacing.sm,
       paddingHorizontal: spacing.lg,
-    },
-    scanSummary: {
-      ...typography.caption,
-      color: colors.text.secondary,
-      lineHeight: 20,
-    },
-    filterRow: {
-      gap: spacing.sm,
-      paddingBottom: spacing.xs,
-    },
-    filterChip: {
-      borderColor: colors.border.default,
-      borderRadius: radii.pill,
-      borderWidth: 1,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-    },
-    filterChipActive: {
-      backgroundColor: colors.background.accent,
-      borderColor: colors.brand.teal,
-    },
-    filterChipText: {
-      ...typography.caption,
-      color: colors.text.secondary,
-      fontWeight: '600',
-    },
-    filterChipTextActive: {
-      color: colors.text.brand,
     },
     list: {
       flex: 1,
     },
     listContent: {
+      flexGrow: 1,
       gap: spacing.sm,
       paddingBottom: spacing.md,
       paddingHorizontal: spacing.lg,
-      paddingTop: spacing.sm,
     },
     appRow: {
       alignItems: 'center',
@@ -428,19 +341,6 @@ function createStyles(colors: ColorPalette) {
     },
     appRowSelected: {
       borderColor: colors.brand.teal,
-    },
-    appIcon: {
-      alignItems: 'center',
-      backgroundColor: colors.background.accentStrong,
-      borderRadius: radii.pill,
-      height: 44,
-      justifyContent: 'center',
-      width: 44,
-    },
-    appIconText: {
-      ...typography.label,
-      color: colors.text.brand,
-      fontSize: 18,
     },
     appInfo: {
       flex: 1,

@@ -12,6 +12,8 @@ export type InstalledApp = {
   packageName: string;
   isSystemApp: boolean;
   category: AppCategory;
+  iconUri?: string | null;
+  iconBase64?: string | null;
 };
 
 export type InstalledAppsResult = {

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
+import { AppIcon } from '../AppIcon';
 import { useTheme } from '../../context/ThemeContext';
 import type { AppBlockRule } from '../../lib/appRules';
 import type { ColorPalette } from '../../theme/colors';
@@ -8,12 +9,16 @@ import { radii, spacing, typography } from '../../theme';
 
 type BlockedAppRowProps = {
   rule: AppBlockRule;
+  iconUri?: string | null;
+  iconBase64?: string | null;
   onUnblock: () => void;
   unblocking?: boolean;
 };
 
 export function BlockedAppRow({
   rule,
+  iconUri,
+  iconBase64,
   onUnblock,
   unblocking = false,
 }: BlockedAppRowProps) {
@@ -23,9 +28,13 @@ export function BlockedAppRow({
 
   return (
     <View style={styles.row}>
-      <View style={styles.icon}>
-        <Text style={styles.iconText}>{displayName.charAt(0).toUpperCase()}</Text>
-      </View>
+      <AppIcon
+        iconBase64={iconBase64}
+        iconUri={iconUri}
+        name={displayName}
+        packageName={rule.packageName}
+        size={40}
+      />
       <View style={styles.info}>
         <Text style={styles.name}>{displayName}</Text>
         <Text style={styles.package}>{rule.packageName}</Text>
@@ -108,19 +117,6 @@ function createStyles(colors: ColorPalette) {
       flexDirection: 'row',
       gap: spacing.md,
       padding: spacing.md,
-    },
-    icon: {
-      alignItems: 'center',
-      backgroundColor: colors.background.accentStrong,
-      borderRadius: radii.pill,
-      height: 40,
-      justifyContent: 'center',
-      width: 40,
-    },
-    iconText: {
-      ...typography.label,
-      color: colors.text.brand,
-      fontSize: 16,
     },
     info: {
       flex: 1,

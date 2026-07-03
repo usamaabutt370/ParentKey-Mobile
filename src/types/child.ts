@@ -15,7 +15,7 @@ export type ChildProfileDraft = {
   avatarId?: ChildAvatarId;
 };
 
-/** Child account: `children` row joined with linked `profiles` row. */
+/** Child account: `children` row with names stored on the row; email from linked profile. */
 export type ChildProfile = {
   id: string;
   email: string | null;

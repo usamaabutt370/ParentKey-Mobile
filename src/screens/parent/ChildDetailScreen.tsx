@@ -19,10 +19,16 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import {
   fetchChildBlockRules,
+  fetchChildInstalledApps,
   removeChildBlockRule,
   type AppBlockRule,
 } from '../../lib/appRules';
-import { fetchChildById, getChildDisplayName } from '../../lib/children';
+import { fetchChildById, getChildDisplayName, deleteChildAccount } from '../../lib/children';
+import {
+  buildAppIconLookup,
+  mergeInstalledAppIcons,
+  type AppIconData,
+} from '../../lib/installedApps';
 import type { ChildrenStackParamList } from '../../navigation/types';
 import type { ChildProfile } from '../../types/child';
 import type { ColorPalette } from '../../theme/colors';
@@ -45,11 +51,13 @@ export function ChildDetailScreen({ navigation, route }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [child, setChild] = useState<ChildProfile | null>(null);
   const [blockRules, setBlockRules] = useState<AppBlockRule[]>([]);
+  const [appIcons, setAppIcons] = useState<Map<string, AppIconData>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unblockingPackage, setUnblockingPackage] = useState<string | null>(
     null,
   );
+  const [deleting, setDeleting] = useState(false);
 
   const loadChild = useCallback(async () => {
     const parentId = session?.user.id;
@@ -65,9 +73,10 @@ export function ChildDetailScreen({ navigation, route }: Props) {
     setLoading(true);
     setError(null);
 
-    const [childResult, rulesResult] = await Promise.all([
+    const [childResult, rulesResult, installedAppsResult] = await Promise.all([
       fetchChildById(parentId, childId),
       fetchChildBlockRules(childId),
+      fetchChildInstalledApps(childId),
     ]);
 
     if (childResult.ok) {
@@ -81,6 +90,19 @@ export function ChildDetailScreen({ navigation, route }: Props) {
       setBlockRules(rulesResult.rules);
     } else if (childResult.ok) {
       setBlockRules([]);
+    }
+
+    if (installedAppsResult.ok) {
+      const appsWithIcons = await mergeInstalledAppIcons(
+        installedAppsResult.apps.map(app => ({
+          packageName: app.packageName,
+          iconUri: null,
+          iconBase64: app.iconBase64,
+        })),
+      );
+      setAppIcons(buildAppIconLookup(appsWithIcons));
+    } else {
+      setAppIcons(new Map());
     }
 
     setLoading(false);
@@ -139,6 +161,44 @@ export function ChildDetailScreen({ navigation, route }: Props) {
       screen: 'SelectApps',
       params: { mode: 'block', childId },
     });
+  };
+
+  const handleDeleteChild = () => {
+    const parentId = session?.user.id;
+    if (!parentId || !child) {
+      return;
+    }
+
+    Alert.alert(
+      'Delete child account',
+      `Permanently remove ${getChildDisplayName(child)}'s account? Their blocked apps and device data will be deleted and they will no longer be able to sign in.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              setDeleting(true);
+
+              const result = await deleteChildAccount({
+                parentId,
+                childId,
+              });
+
+              setDeleting(false);
+
+              if (!result.ok) {
+                Alert.alert('Could not delete child', result.message);
+                return;
+              }
+
+              navigation.goBack();
+            })();
+          },
+        },
+      ],
+    );
   };
 
   const avatar = getChildAvatar(child?.avatarId ?? undefined);
@@ -200,14 +260,20 @@ export function ChildDetailScreen({ navigation, route }: Props) {
               <InfoTipCard message="No apps are blocked for this child yet. Block apps from Controls or tap the button below." />
             ) : (
               <View style={styles.blockedList}>
-                {blockRules.map(rule => (
-                  <BlockedAppRow
-                    key={rule.id}
-                    onUnblock={() => handleUnblock(rule)}
-                    rule={rule}
-                    unblocking={unblockingPackage === rule.packageName}
-                  />
-                ))}
+                {blockRules.map(rule => {
+                  const icons = appIcons.get(rule.packageName);
+
+                  return (
+                    <BlockedAppRow
+                      iconBase64={icons?.iconBase64}
+                      iconUri={icons?.iconUri}
+                      key={rule.id}
+                      onUnblock={() => handleUnblock(rule)}
+                      rule={rule}
+                      unblocking={unblockingPackage === rule.packageName}
+                    />
+                  );
+                })}
               </View>
             )}
             <AuthButton
@@ -216,6 +282,20 @@ export function ChildDetailScreen({ navigation, route }: Props) {
                 blockRules.length === 0 ? 'Block apps' : 'Manage blocked apps'
               }
               variant={blockRules.length === 0 ? 'primary' : 'secondary'}
+            />
+          </View>
+
+          <View style={styles.dangerSection}>
+            <Text style={styles.dangerTitle}>Danger zone</Text>
+            <Text style={styles.dangerBody}>
+              Deleting this child removes their login, blocked apps, and synced
+              device data. This cannot be undone.
+            </Text>
+            <AuthButton
+              loading={deleting}
+              onPress={handleDeleteChild}
+              title="Delete child account"
+              variant="secondary"
             />
           </View>
         </>
@@ -327,6 +407,20 @@ function createStyles(colors: ColorPalette) {
     },
     blockedList: {
       gap: spacing.sm,
+    },
+    dangerSection: {
+      gap: spacing.sm,
+      marginTop: spacing.md,
+    },
+    dangerTitle: {
+      ...typography.label,
+      color: colors.error,
+      fontSize: 16,
+    },
+    dangerBody: {
+      ...typography.caption,
+      color: colors.text.secondary,
+      lineHeight: 20,
     },
   });
 }

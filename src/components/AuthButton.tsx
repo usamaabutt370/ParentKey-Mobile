@@ -58,7 +58,7 @@ export function AuthButton({
       accessibilityRole="button"
       disabled={isDisabled}
       style={({ pressed }) => [
-        styles.primaryWrapper,
+        styles.primaryOuter,
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
         style as StyleProp<ViewStyle>,
@@ -68,7 +68,7 @@ export function AuthButton({
         colors={[colors.button.gradientStart, colors.button.gradientEnd]}
         end={{ x: 1, y: 0.5 }}
         start={{ x: 0, y: 0.5 }}
-        style={styles.gradient}>
+        style={styles.button}>
         {loading ? (
           <ActivityIndicator color={colors.button.text} />
         ) : (
@@ -86,24 +86,17 @@ function createStyles(colors: ColorPalette) {
       borderRadius: radii.pill,
       justifyContent: 'center',
       minHeight: 52,
-      paddingHorizontal: 20,
+      paddingHorizontal: 24,
+      paddingVertical: 14,
     },
-    primaryWrapper: {
+    primaryOuter: {
       borderRadius: radii.pill,
       elevation: 6,
-      minHeight: 52,
       overflow: 'hidden',
       shadowColor: colors.button.glow,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.6,
       shadowRadius: 12,
-    },
-    gradient: {
-      width: '100%',
-      alignItems: 'center',
-      borderRadius: radii.pill,
-      justifyContent: 'center',
-      minHeight: 52,
     },
     secondary: {
       backgroundColor: 'transparent',
@@ -118,6 +111,7 @@ function createStyles(colors: ColorPalette) {
     },
     label: {
       ...typography.button,
+      textAlign: 'center',
     },
     primaryLabel: {
       color: colors.button.text,

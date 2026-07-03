@@ -41,9 +41,9 @@ export type ColorPalette = {
 export const darkColors: ColorPalette = {
   background: {
     primary: '#050A14',
-    secondary: 'rgba(8, 145, 178, 0.14)',
-    accent: 'rgba(20, 184, 166, 0.2)',
-    accentStrong: 'rgba(20, 184, 166, 0.38)',
+    secondary: 'rgba(8, 145, 178, 0.17)',
+    accent: 'rgba(20, 184, 166, 0.24)',
+    accentStrong: 'rgba(20, 184, 166, 0.42)',
   },
   text: {
     primary: '#FFFFFF',
@@ -64,15 +64,15 @@ export const darkColors: ColorPalette = {
     text: '#FFFFFF',
   },
   input: {
-    background: 'rgba(255, 255, 255, 0.06)',
-    border: 'rgba(148, 163, 184, 0.25)',
+    background: 'rgba(15, 23, 42, 0.72)',
+    border: 'rgba(148, 163, 184, 0.30)',
     focusBorder: '#14B8A6',
     text: '#F8FAFC',
     shadow: '#000000',
   },
   border: {
-    default: 'rgba(148, 163, 184, 0.2)',
-    strong: 'rgba(148, 163, 184, 0.35)',
+    default: 'rgba(148, 163, 184, 0.24)',
+    strong: 'rgba(148, 163, 184, 0.40)',
   },
   error: '#F87171',
   success: '#34D399',
