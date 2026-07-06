@@ -2,23 +2,27 @@ import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useTheme } from '../../context/ThemeContext';
-import type { MockAlert } from '../../constants/mockReportData';
+import { getAlertIconName } from '../../lib/parentActivity';
+import type { ActivityAlert } from '../../types/parentActivity';
 import type { ColorPalette } from '../../theme/colors';
 import { radii, spacing, typography } from '../../theme';
 
 type RecentAlertsListProps = {
-  alerts: MockAlert[];
-};
-
-const ALERT_ICONS: Record<MockAlert['type'], 'clock' | 'moon' | 'slash'> = {
-  limit: 'clock',
-  bedtime: 'moon',
-  blocked: 'slash',
+  alerts: ActivityAlert[];
 };
 
 export function RecentAlertsList({ alerts }: RecentAlertsListProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  if (alerts.length === 0) {
+    return (
+      <Text style={styles.emptyText}>
+        No recent activity yet. Alerts appear when apps are blocked, usage is
+        synced, or a device stops syncing.
+      </Text>
+    );
+  }
 
   return (
     <View style={styles.list}>
@@ -27,7 +31,7 @@ export function RecentAlertsList({ alerts }: RecentAlertsListProps) {
           <View style={styles.iconWrap}>
             <Feather
               color={colors.text.brand}
-              name={ALERT_ICONS[alert.type]}
+              name={getAlertIconName(alert.type)}
               size={16}
             />
           </View>
@@ -80,6 +84,11 @@ function createStyles(colors: ColorPalette) {
       ...typography.caption,
       color: colors.text.secondary,
       fontSize: 11,
+    },
+    emptyText: {
+      ...typography.body,
+      color: colors.text.secondary,
+      lineHeight: 22,
     },
   });
 }

@@ -11,16 +11,32 @@ import { radii, spacing, typography } from '../../theme';
 type ChildCardProps = {
   child: ChildProfile;
   onPress?: () => void;
+  screenTimeToday?: string;
+  deviceStatus?: 'online' | 'offline' | 'never';
 };
 
-export function ChildCard({ child, onPress }: ChildCardProps) {
+export function ChildCard({
+  child,
+  onPress,
+  screenTimeToday,
+  deviceStatus,
+}: ChildCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const avatar = getChildAvatar(child.avatarId ?? undefined);
   const displayName = getChildDisplayName(child);
   const subtitle = child.email ?? 'Linked account';
-  const meta =
-    child.age != null ? `${child.age} years old` : 'Account linked';
+  const meta = screenTimeToday
+    ? `${screenTimeToday} today`
+    : child.age != null
+      ? `${child.age} years old`
+      : 'Account linked';
+  const statusColor =
+    deviceStatus === 'online'
+      ? colors.success
+      : deviceStatus === 'offline'
+        ? colors.error
+        : colors.text.brand;
 
   const content = (
     <>
@@ -39,7 +55,9 @@ export function ChildCard({ child, onPress }: ChildCardProps) {
           <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
         <View style={styles.metaColumn}>
-          <Text style={styles.meta}>{meta}</Text>
+          <Text style={[styles.meta, deviceStatus ? { color: statusColor } : null]}>
+            {meta}
+          </Text>
           {onPress ? (
             <Feather color={colors.text.placeholder} name="chevron-right" size={18} />
           ) : null}

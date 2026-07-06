@@ -8,10 +8,16 @@ import {
   setNativeBlockedPackages,
 } from '../lib/androidAppBlocking';
 import {
+  fetchDailyAppUsage,
+  isUsageAccessGranted,
+  isAndroidUsageStatsSupported,
+} from '../lib/androidUsageStats';
+import {
   fetchChildBlockRules,
   registerChildDevice,
   syncChildInstalledApps,
 } from '../lib/appRules';
+import { syncChildAppUsage } from '../lib/appUsage';
 import { fetchInstalledApps } from '../lib/installedApps';
 import { resolveIconBase64ForSync } from '../lib/iconCache';
 import { supabase } from '../lib/supabase';
@@ -20,6 +26,8 @@ import type { InstalledApp } from '../types/installedApp';
 type ChildAppBlockingState = {
   supported: boolean;
   accessibilityEnabled: boolean;
+  usageAccessGranted: boolean;
+  usageStatsSupported: boolean;
   syncing: boolean;
   blockedCount: number;
   blockedPackages: string[];
@@ -28,6 +36,7 @@ type ChildAppBlockingState = {
   lastSyncedAt: string | null;
   error: string | null;
   refreshAccessibilityStatus: () => Promise<void>;
+  refreshUsageAccessStatus: () => Promise<void>;
   syncNow: () => Promise<void>;
 };
 
@@ -35,7 +44,9 @@ export function useChildAppBlocking(): ChildAppBlockingState {
   const { session } = useAuth();
   const childId = session?.user.id;
   const [supported] = useState(isAndroidAppBlockingSupported());
+  const [usageStatsSupported] = useState(isAndroidUsageStatsSupported());
   const [accessibilityEnabled, setAccessibilityEnabled] = useState(false);
+  const [usageAccessGranted, setUsageAccessGranted] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [blockedCount, setBlockedCount] = useState(0);
   const [blockedPackages, setBlockedPackages] = useState<string[]>([]);
@@ -44,6 +55,7 @@ export function useChildAppBlocking(): ChildAppBlockingState {
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const deviceIdRef = useRef<string | null>(null);
+  const usageTrackingStartedRef = useRef<string | null>(null);
 
   const refreshAccessibilityStatus = useCallback(async () => {
     if (!supported) {
@@ -53,6 +65,65 @@ export function useChildAppBlocking(): ChildAppBlockingState {
     const enabled = await isAccessibilityServiceEnabled();
     setAccessibilityEnabled(enabled);
   }, [supported]);
+
+  const refreshUsageAccessStatus = useCallback(async () => {
+    if (!usageStatsSupported) {
+      return;
+    }
+
+    const granted = await isUsageAccessGranted();
+    setUsageAccessGranted(granted);
+  }, [usageStatsSupported]);
+
+  const syncUsageStats = useCallback(
+    async (
+      childIdValue: string,
+      deviceId: string,
+      usageTrackingStartedAt: string | null,
+    ) => {
+      if (!usageStatsSupported) {
+        return;
+      }
+
+      const granted = await isUsageAccessGranted();
+      setUsageAccessGranted(granted);
+
+      if (!granted) {
+        return;
+      }
+
+      try {
+        const usageRecords = await fetchDailyAppUsage(1);
+        const isFirstUsageSync = !usageTrackingStartedAt;
+        const syncUsageResult = await syncChildAppUsage({
+          childId: childIdValue,
+          deviceId,
+          isFirstUsageSync: !usageTrackingStartedAt,
+          trackingStartedAt: usageTrackingStartedAt,
+          records: usageRecords.map(record => ({
+            packageName: record.packageName,
+            appName: record.appName,
+            usageDate: record.usageDate,
+            foregroundSeconds: record.foregroundSeconds,
+          })),
+        });
+
+        if (!syncUsageResult.ok) {
+          setError(syncUsageResult.message);
+          return;
+        }
+
+        if (isFirstUsageSync) {
+          usageTrackingStartedRef.current = new Date().toISOString();
+        } else if (usageTrackingStartedAt) {
+          usageTrackingStartedRef.current = usageTrackingStartedAt;
+        }
+      } catch {
+        // Usage sync is optional and should not block app/rule sync.
+      }
+    },
+    [usageStatsSupported],
+  );
 
   const loadInstalledApps = useCallback(async () => {
     if (!supported || Platform.OS !== 'android') {
@@ -111,6 +182,8 @@ export function useChildAppBlocking(): ChildAppBlockingState {
       }
 
       deviceIdRef.current = deviceResult.device.id;
+      usageTrackingStartedRef.current =
+        deviceResult.device.usageTrackingStartedAt;
 
       const installedResult = await fetchInstalledApps();
       setInstalledApps(installedResult.apps);
@@ -137,6 +210,11 @@ export function useChildAppBlocking(): ChildAppBlockingState {
       }
 
       await applyBlockRules();
+      await syncUsageStats(
+        childId,
+        deviceResult.device.id,
+        deviceResult.device.usageTrackingStartedAt,
+      );
       setLastSyncedAt(new Date().toISOString());
     } catch (syncError) {
       const message =
@@ -147,11 +225,12 @@ export function useChildAppBlocking(): ChildAppBlockingState {
     } finally {
       setSyncing(false);
     }
-  }, [applyBlockRules, childId, supported]);
+  }, [applyBlockRules, childId, supported, syncUsageStats]);
 
   useEffect(() => {
     void refreshAccessibilityStatus();
-  }, [refreshAccessibilityStatus]);
+    void refreshUsageAccessStatus();
+  }, [refreshAccessibilityStatus, refreshUsageAccessStatus]);
 
   useEffect(() => {
     if (!childId || !supported) {
@@ -186,8 +265,17 @@ export function useChildAppBlocking(): ChildAppBlockingState {
     const subscription = AppState.addEventListener('change', state => {
       if (state === 'active') {
         void refreshAccessibilityStatus();
+        void refreshUsageAccessStatus();
         void loadInstalledApps();
         void applyBlockRules();
+
+        if (deviceIdRef.current && childId) {
+          void syncUsageStats(
+            childId,
+            deviceIdRef.current,
+            usageTrackingStartedRef.current,
+          );
+        }
       }
     });
 
@@ -195,11 +283,21 @@ export function useChildAppBlocking(): ChildAppBlockingState {
       void supabase.removeChannel(channel);
       subscription.remove();
     };
-  }, [applyBlockRules, childId, loadInstalledApps, refreshAccessibilityStatus, supported]);
+  }, [
+    applyBlockRules,
+    childId,
+    loadInstalledApps,
+    refreshAccessibilityStatus,
+    refreshUsageAccessStatus,
+    supported,
+    syncUsageStats,
+  ]);
 
   return {
     supported,
     accessibilityEnabled,
+    usageAccessGranted,
+    usageStatsSupported,
     syncing,
     blockedCount,
     blockedPackages,
@@ -208,6 +306,7 @@ export function useChildAppBlocking(): ChildAppBlockingState {
     lastSyncedAt,
     error,
     refreshAccessibilityStatus,
+    refreshUsageAccessStatus,
     syncNow,
   };
 }

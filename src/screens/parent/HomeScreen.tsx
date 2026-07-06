@@ -14,15 +14,7 @@ import { ScreenLayout, useScreenStyles } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useParentChildren } from '../../hooks/useParentChildren';
-import {
-  MOCK_DASHBOARD_STATS,
-} from '../../constants/mockParentData';
-import {
-  MOCK_RECENT_ALERTS,
-  MOCK_REPORT_SUMMARY,
-  MOCK_TOP_APPS,
-  MOCK_WEEKLY_USAGE,
-} from '../../constants/mockReportData';
+import { useParentActivityDashboard } from '../../hooks/useParentActivityDashboard';
 import type { ParentTabParamList } from '../../navigation/types';
 import type { ColorPalette } from '../../theme/colors';
 import { radii, spacing, typography } from '../../theme';
@@ -36,7 +28,21 @@ export function ParentHomeScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { session } = useAuth();
   const { children, loading: childrenLoading } = useParentChildren();
+  const {
+    summary,
+    stats,
+    topApps,
+    weeklyUsage,
+    childSummaries,
+    alerts,
+    loading: activityLoading,
+  } = useParentActivityDashboard();
   const firstName = session?.user.user_metadata?.first_name;
+
+  const summaryByChildId = useMemo(
+    () => new Map(childSummaries.map(item => [item.childId, item])),
+    [childSummaries],
+  );
 
   return (
     <ScreenLayout
@@ -56,17 +62,17 @@ export function ParentHomeScreen() {
       <View style={styles.statsRow}>
         <StatCard
           label="Screen time"
-          value={MOCK_DASHBOARD_STATS.totalScreenTime}
+          value={activityLoading ? '...' : summary.weekLabel}
         />
         <StatCard
           accent={colors.brand.tealLight}
           label="Active rules"
-          value={String(MOCK_DASHBOARD_STATS.activeRestrictions)}
+          value={activityLoading ? '...' : String(stats.activeRulesCount)}
         />
         <StatCard
           accent={colors.error}
           label="Alerts"
-          value={String(MOCK_DASHBOARD_STATS.alerts)}
+          value={activityLoading ? '...' : String(stats.alertCount)}
         />
       </View>
 
@@ -79,34 +85,42 @@ export function ParentHomeScreen() {
         <View style={styles.reportSummaryRow}>
           <View style={styles.reportSummaryCard}>
             <Text style={styles.reportSummaryValue}>
-              {MOCK_REPORT_SUMMARY.today}
+              {activityLoading ? '...' : summary.todayLabel}
             </Text>
             <Text style={styles.reportSummaryLabel}>Today</Text>
           </View>
           <View style={styles.reportSummaryCard}>
             <Text style={styles.reportSummaryValue}>
-              {MOCK_REPORT_SUMMARY.thisWeek}
+              {activityLoading ? '...' : summary.weekLabel}
             </Text>
             <Text style={styles.reportSummaryLabel}>This week</Text>
           </View>
-          <View style={styles.reportSummaryCard}>
-            <Text style={[styles.reportSummaryValue, styles.trendUp]}>
-              {MOCK_REPORT_SUMMARY.vsLastWeek}
-            </Text>
-            <Text style={styles.reportSummaryLabel}>vs last week</Text>
-          </View>
         </View>
-        <TopAppsReport apps={MOCK_TOP_APPS} />
+        {topApps.length > 0 ? (
+          <TopAppsReport apps={topApps} />
+        ) : (
+          <Text style={styles.emptyUsageText}>
+            Usage data appears after the child enables Usage access and syncs.
+          </Text>
+        )}
       </View>
 
       <View style={styles.section}>
         <SectionHeader title="Weekly overview" />
-        <WeeklyUsageChart data={MOCK_WEEKLY_USAGE} />
+        {weeklyUsage.every(day => day.hours === 0) ? (
+          <Text style={styles.emptyUsageText}>No weekly usage synced yet.</Text>
+        ) : (
+          <WeeklyUsageChart data={weeklyUsage} />
+        )}
       </View>
 
       <View style={styles.section}>
         <SectionHeader title="Recent alerts" />
-        <RecentAlertsList alerts={MOCK_RECENT_ALERTS} />
+        {activityLoading ? (
+          <ActivityIndicator color={colors.brand.tealLight} size="small" />
+        ) : (
+          <RecentAlertsList alerts={alerts} />
+        )}
       </View>
 
       <View style={styles.section}>
@@ -123,18 +137,28 @@ export function ParentHomeScreen() {
               No children linked yet. Tap See all to add one.
             </Text>
           ) : (
-            children.map(child => (
-              <ChildCard
-                child={child}
-                key={child.id}
-                onPress={() =>
-                  navigation.navigate('Children', {
-                    screen: 'ChildDetail',
-                    params: { childId: child.id },
-                  })
-                }
-              />
-            ))
+            children.map(child => {
+              const activity = summaryByChildId.get(child.id);
+
+              return (
+                <ChildCard
+                  child={child}
+                  deviceStatus={activity?.deviceStatus}
+                  key={child.id}
+                  onPress={() =>
+                    navigation.navigate('Children', {
+                      screen: 'ChildDetail',
+                      params: { childId: child.id },
+                    })
+                  }
+                  screenTimeToday={
+                    activity && activity.todaySeconds > 0
+                      ? activity.todayLabel
+                      : undefined
+                  }
+                />
+              );
+            })
           )}
         </View>
       </View>
@@ -176,11 +200,12 @@ function createStyles(colors: ColorPalette) {
       fontSize: 16,
       fontWeight: '700',
     },
-    trendUp: {
-      color: colors.error,
-    },
     reportSummaryLabel: {
       ...typography.caption,
+      color: colors.text.secondary,
+    },
+    emptyUsageText: {
+      ...typography.body,
       color: colors.text.secondary,
     },
     childList: {

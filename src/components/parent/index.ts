@@ -1,3 +1,4 @@
+export { ChildActivityCard } from './ChildActivityCard';
 export { ActiveBlockRuleCard, BlockedAppRow } from './BlockRuleCard';
 export { AvatarPicker } from './AvatarPicker';
 export { ChildCard } from './ChildCard';

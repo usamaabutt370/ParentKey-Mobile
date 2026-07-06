@@ -4,6 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthButton, ScreenLayout, useScreenStyles } from '../../components';
 import { ChildCard, SectionHeader } from '../../components/parent';
 import { useTheme } from '../../context/ThemeContext';
+import { useParentActivityDashboard } from '../../hooks/useParentActivityDashboard';
 import { useParentChildren } from '../../hooks/useParentChildren';
 import type { ChildrenStackParamList } from '../../navigation/types';
 import type { ColorPalette } from '../../theme/colors';
@@ -16,6 +17,13 @@ export function ParentChildrenScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { children, loading, error } = useParentChildren();
+  const { childSummaries, loading: activityLoading } =
+    useParentActivityDashboard();
+
+  const summaryByChildId = useMemo(
+    () => new Map(childSummaries.map(item => [item.childId, item])),
+    [childSummaries],
+  );
 
   return (
     <ScreenLayout
@@ -36,7 +44,7 @@ export function ParentChildrenScreen({ navigation }: Props) {
 
       <View style={styles.section}>
         <SectionHeader title="Linked children" />
-        {loading ? (
+        {loading || activityLoading ? (
           <View style={styles.centered}>
             <ActivityIndicator color={colors.brand.tealLight} size="large" />
           </View>
@@ -52,15 +60,25 @@ export function ParentChildrenScreen({ navigation }: Props) {
           </View>
         ) : (
           <View style={styles.childList}>
-            {children.map(child => (
-              <ChildCard
-                child={child}
-                key={child.id}
-                onPress={() =>
-                  navigation.navigate('ChildDetail', { childId: child.id })
-                }
-              />
-            ))}
+            {children.map(child => {
+              const activity = summaryByChildId.get(child.id);
+
+              return (
+                <ChildCard
+                  child={child}
+                  deviceStatus={activity?.deviceStatus}
+                  key={child.id}
+                  onPress={() =>
+                    navigation.navigate('ChildDetail', { childId: child.id })
+                  }
+                  screenTimeToday={
+                    activity && activity.todaySeconds > 0
+                      ? activity.todayLabel
+                      : undefined
+                  }
+                />
+              );
+            })}
           </View>
         )}
       </View>

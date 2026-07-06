@@ -8,12 +8,15 @@ import {
   isAndroidAppBlockingSupported,
   openAccessibilitySettings,
 } from '../../lib/androidAppBlocking';
+import { openUsageAccessSettings } from '../../lib/androidUsageStats';
 import type { InstalledApp } from '../../types/installedApp';
 import type { ColorPalette } from '../../theme/colors';
 import { spacing, typography } from '../../theme';
 
 type AndroidAppBlockingPanelProps = {
   accessibilityEnabled: boolean;
+  usageAccessGranted: boolean;
+  usageStatsSupported: boolean;
   appsLoading: boolean;
   blockedCount: number;
   blockedPackages: string[];
@@ -22,11 +25,14 @@ type AndroidAppBlockingPanelProps = {
   lastSyncedAt: string | null;
   error: string | null;
   onRefreshAccessibility: () => Promise<void>;
+  onRefreshUsageAccess: () => Promise<void>;
   onSyncNow: () => Promise<void>;
 };
 
 export function AndroidAppBlockingPanel({
   accessibilityEnabled,
+  usageAccessGranted,
+  usageStatsSupported,
   appsLoading,
   blockedCount,
   blockedPackages,
@@ -35,18 +41,30 @@ export function AndroidAppBlockingPanel({
   lastSyncedAt,
   error,
   onRefreshAccessibility,
+  onRefreshUsageAccess,
   onSyncNow,
 }: AndroidAppBlockingPanelProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [openingSettings, setOpeningSettings] = useState(false);
+  const [openingAccessibilitySettings, setOpeningAccessibilitySettings] =
+    useState(false);
+  const [openingUsageSettings, setOpeningUsageSettings] = useState(false);
 
-  const handleOpenSettings = useCallback(async () => {
-    setOpeningSettings(true);
+  const handleOpenAccessibilitySettings = useCallback(async () => {
+    setOpeningAccessibilitySettings(true);
     try {
       await openAccessibilitySettings();
     } finally {
-      setOpeningSettings(false);
+      setOpeningAccessibilitySettings(false);
+    }
+  }, []);
+
+  const handleOpenUsageSettings = useCallback(async () => {
+    setOpeningUsageSettings(true);
+    try {
+      await openUsageAccessSettings();
+    } finally {
+      setOpeningUsageSettings(false);
     }
   }, []);
 
@@ -54,11 +72,12 @@ export function AndroidAppBlockingPanel({
     const subscription = AppState.addEventListener('change', state => {
       if (state === 'active') {
         void onRefreshAccessibility();
+        void onRefreshUsageAccess();
       }
     });
 
     return () => subscription.remove();
-  }, [onRefreshAccessibility]);
+  }, [onRefreshAccessibility, onRefreshUsageAccess]);
 
   if (!isAndroidAppBlockingSupported()) {
     return (
@@ -72,12 +91,23 @@ export function AndroidAppBlockingPanel({
         <InfoTipCard message="Step 1: Enable ParentKey in Android Accessibility settings. Step 2: Keep this app signed in so blocked apps sync from your parent. Blocked apps stay open but show a lock overlay on top." />
       ) : null}
 
+      {usageStatsSupported && !usageAccessGranted ? (
+        <InfoTipCard message="Enable Usage access for ParentKey so your parent can see how long each app is used. Open Usage access settings, find ParentKey, and turn it on." />
+      ) : null}
+
       <View style={styles.statusCard}>
         <StatusRow
           label="Accessibility service"
           value={accessibilityEnabled ? 'Enabled' : 'Required'}
           valueColor={accessibilityEnabled ? colors.success : colors.error}
         />
+        {usageStatsSupported ? (
+          <StatusRow
+            label="Usage access"
+            value={usageAccessGranted ? 'Enabled' : 'Required'}
+            valueColor={usageAccessGranted ? colors.success : colors.error}
+          />
+        ) : null}
         <StatusRow
           label="Blocked apps on device"
           value={String(blockedCount)}
@@ -98,9 +128,18 @@ export function AndroidAppBlockingPanel({
 
       {!accessibilityEnabled ? (
         <AuthButton
-          loading={openingSettings}
-          onPress={() => void handleOpenSettings()}
+          loading={openingAccessibilitySettings}
+          onPress={() => void handleOpenAccessibilitySettings()}
           title="Enable app blocking"
+        />
+      ) : null}
+
+      {usageStatsSupported && !usageAccessGranted ? (
+        <AuthButton
+          loading={openingUsageSettings}
+          onPress={() => void handleOpenUsageSettings()}
+          title="Enable usage tracking"
+          variant="secondary"
         />
       ) : null}
 
