@@ -1,29 +1,33 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import type { MockDailyUsage } from '../../constants/mockReportData';
+import type { UsageDailyTotal } from '../../types/appUsage';
 import type { ColorPalette } from '../../theme/colors';
 import { radii, spacing, typography } from '../../theme';
 
 type WeeklyUsageChartProps = {
-  data: MockDailyUsage[];
+  data: UsageDailyTotal[];
 };
 
 export function WeeklyUsageChart({ data }: WeeklyUsageChartProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const maxHours = Math.max(...data.map(item => item.hours), 1);
+  const maxHours = Math.max(...data.map(item => item.hours), 0);
 
   return (
     <View style={styles.chart}>
       {data.map(item => {
-        const barHeight = Math.max((item.hours / maxHours) * 100, 8);
+        const hasActivity = item.hours > 0;
+        const barHeight =
+          hasActivity && maxHours > 0 ? (item.hours / maxHours) * 100 : 0;
 
         return (
           <View key={item.day} style={styles.barColumn}>
             <Text style={styles.barValue}>{item.label}</Text>
             <View style={styles.barTrack}>
-              <View style={[styles.barFill, { height: `${barHeight}%` }]} />
+              {hasActivity ? (
+                <View style={[styles.barFill, { height: `${barHeight}%` }]} />
+              ) : null}
             </View>
             <Text style={styles.barLabel}>{item.day}</Text>
           </View>

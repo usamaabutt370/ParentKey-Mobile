@@ -10,8 +10,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   BlockedAppRow,
+  ChildActivityCard,
   InfoTipCard,
   ScreenHeader,
+  TopAppsReport,
 } from '../../components/parent';
 import { AuthButton, ScreenLayout } from '../../components';
 import { getChildAvatar } from '../../constants/childAvatars';
@@ -20,15 +22,23 @@ import { useTheme } from '../../context/ThemeContext';
 import {
   fetchChildBlockRules,
   fetchChildInstalledApps,
+  fetchParentChildDevices,
   removeChildBlockRule,
   type AppBlockRule,
 } from '../../lib/appRules';
+import {
+  buildTopAppsForDate,
+  fetchChildAppUsage,
+} from '../../lib/appUsage';
 import { fetchChildById, getChildDisplayName, deleteChildAccount } from '../../lib/children';
 import {
   buildAppIconLookup,
   mergeInstalledAppIcons,
   type AppIconData,
 } from '../../lib/installedApps';
+import { buildChildActivitySummaries, formatTimeAgo } from '../../lib/parentActivity';
+import type { UsageTopApp } from '../../types/appUsage';
+import type { ChildActivitySummary } from '../../types/parentActivity';
 import type { ChildrenStackParamList } from '../../navigation/types';
 import type { ChildProfile } from '../../types/child';
 import type { ColorPalette } from '../../theme/colors';
@@ -44,6 +54,13 @@ function formatLinkedDate(iso: string): string {
   });
 }
 
+function getLocalDateString(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function ChildDetailScreen({ navigation, route }: Props) {
   const { childId } = route.params;
   const { session } = useAuth();
@@ -52,6 +69,9 @@ export function ChildDetailScreen({ navigation, route }: Props) {
   const [child, setChild] = useState<ChildProfile | null>(null);
   const [blockRules, setBlockRules] = useState<AppBlockRule[]>([]);
   const [appIcons, setAppIcons] = useState<Map<string, AppIconData>>(new Map());
+  const [activitySummary, setActivitySummary] =
+    useState<ChildActivitySummary | null>(null);
+  const [topApps, setTopApps] = useState<UsageTopApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unblockingPackage, setUnblockingPackage] = useState<string | null>(
@@ -73,10 +93,13 @@ export function ChildDetailScreen({ navigation, route }: Props) {
     setLoading(true);
     setError(null);
 
-    const [childResult, rulesResult, installedAppsResult] = await Promise.all([
+    const [childResult, rulesResult, installedAppsResult, usageResult, devicesResult] =
+      await Promise.all([
       fetchChildById(parentId, childId),
       fetchChildBlockRules(childId),
       fetchChildInstalledApps(childId),
+      fetchChildAppUsage(childId, 7),
+      fetchParentChildDevices([childId]),
     ]);
 
     if (childResult.ok) {
@@ -103,6 +126,24 @@ export function ChildDetailScreen({ navigation, route }: Props) {
       setAppIcons(buildAppIconLookup(appsWithIcons));
     } else {
       setAppIcons(new Map());
+    }
+
+    if (childResult.ok) {
+      const childName = getChildDisplayName(childResult.child);
+      const usageRecords = usageResult.ok ? usageResult.records : [];
+      const summaries = buildChildActivitySummaries({
+        childIds: [childId],
+        childNames: { [childId]: childName },
+        usageRecords,
+        rules: rulesResult.ok ? rulesResult.rules : [],
+        devices: devicesResult.ok ? devicesResult.devices : [],
+      });
+
+      setActivitySummary(summaries[0] ?? null);
+      setTopApps(buildTopAppsForDate(usageRecords, getLocalDateString()));
+    } else {
+      setActivitySummary(null);
+      setTopApps([]);
     }
 
     setLoading(false);
@@ -255,6 +296,27 @@ export function ChildDetailScreen({ navigation, route }: Props) {
           </View>
 
           <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Activity</Text>
+            {activitySummary ? (
+              <>
+                <ChildActivityCard summary={activitySummary} />
+                {activitySummary.lastSyncedAt ? (
+                  <Text style={styles.syncMeta}>
+                    Last synced {formatTimeAgo(activitySummary.lastSyncedAt)}
+                  </Text>
+                ) : null}
+                {topApps.length > 0 ? (
+                  <TopAppsReport apps={topApps} />
+                ) : (
+                  <InfoTipCard message="No app usage synced for today. Ask your child to enable Usage access and tap Sync apps and rules." />
+                )}
+              </>
+            ) : (
+              <InfoTipCard message="Activity appears after the child device syncs app usage." />
+            )}
+          </View>
+
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Blocked apps</Text>
             {blockRules.length === 0 ? (
               <InfoTipCard message="No apps are blocked for this child yet. Block apps from Controls or tap the button below." />
@@ -404,6 +466,10 @@ function createStyles(colors: ColorPalette) {
       ...typography.label,
       color: colors.text.primary,
       fontSize: 18,
+    },
+    syncMeta: {
+      ...typography.caption,
+      color: colors.text.secondary,
     },
     blockedList: {
       gap: spacing.sm,

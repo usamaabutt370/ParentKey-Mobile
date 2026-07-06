@@ -1,6 +1,9 @@
 import type { AppCategory } from '../types/installedApp';
 import { supabase } from './supabase';
 
+const DEVICE_SELECT_FIELDS =
+  'id, child_id, device_key, platform, device_label, last_seen_at, usage_tracking_started_at';
+
 export type ChildDevice = {
   id: string;
   childId: string;
@@ -8,6 +11,7 @@ export type ChildDevice = {
   platform: 'android' | 'ios';
   deviceLabel: string | null;
   lastSeenAt: string;
+  usageTrackingStartedAt: string | null;
 };
 
 export type ChildInstalledAppRecord = {
@@ -47,6 +51,7 @@ type DeviceRow = {
   platform: 'android' | 'ios';
   device_label: string | null;
   last_seen_at: string;
+  usage_tracking_started_at: string | null;
 };
 
 type InstalledAppRow = {
@@ -81,6 +86,7 @@ function mapDeviceRow(row: DeviceRow): ChildDevice {
     platform: row.platform,
     deviceLabel: row.device_label,
     lastSeenAt: row.last_seen_at,
+    usageTrackingStartedAt: row.usage_tracking_started_at,
   };
 }
 
@@ -132,7 +138,7 @@ export async function registerChildDevice(params: {
       },
       { onConflict: 'child_id,device_key' },
     )
-    .select('id, child_id, device_key, platform, device_label, last_seen_at')
+    .select(DEVICE_SELECT_FIELDS)
     .single();
 
   if (error) {
@@ -324,6 +330,32 @@ export async function removeChildBlockRule(params: {
   }
 
   return { ok: true };
+}
+
+export async function fetchParentChildDevices(
+  childIds: string[],
+): Promise<
+  | { ok: true; devices: ChildDevice[] }
+  | { ok: false; message: string }
+> {
+  if (childIds.length === 0) {
+    return { ok: true, devices: [] };
+  }
+
+  const { data, error } = await supabase
+    .from('child_devices')
+    .select(DEVICE_SELECT_FIELDS)
+    .in('child_id', childIds)
+    .order('last_seen_at', { ascending: false });
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  return {
+    ok: true,
+    devices: (data as DeviceRow[]).map(mapDeviceRow),
+  };
 }
 
 export function groupBlockRulesByChild(

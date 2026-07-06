@@ -54,8 +54,11 @@ export function ChildHomeScreen() {
               installedApps={androidBlocking.installedApps}
               lastSyncedAt={androidBlocking.lastSyncedAt}
               onRefreshAccessibility={androidBlocking.refreshAccessibilityStatus}
+              onRefreshUsageAccess={androidBlocking.refreshUsageAccessStatus}
               onSyncNow={androidBlocking.syncNow}
               syncing={androidBlocking.syncing}
+              usageAccessGranted={androidBlocking.usageAccessGranted}
+              usageStatsSupported={androidBlocking.usageStatsSupported}
             />
           </>
         )}
