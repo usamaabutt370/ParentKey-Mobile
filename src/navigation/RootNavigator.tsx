@@ -9,7 +9,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ScreenLayout } from '../components';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { APP_VARIANT } from '../lib/appInfo';
 import { ChildHomeScreen } from '../screens/ChildHomeScreen';
+import { WrongAppScreen } from '../screens/WrongAppScreen';
 import type { ColorPalette } from '../theme/colors';
 import { AuthNavigator } from './AuthNavigator';
 import { ParentTabNavigator } from './ParentTabNavigator';
@@ -20,14 +22,23 @@ const AppStack = createNativeStackNavigator<AppStackParamList>();
 
 function AppStackNavigator() {
   const { role } = useAuth();
+
+  if (role && APP_VARIANT && role !== APP_VARIANT) {
+    return <WrongAppScreen accountRole={role} appVariant={APP_VARIANT} />;
+  }
+
   const initialRouteName = role === 'child' ? 'ChildHome' : 'ParentTabs';
 
   return (
     <AppStack.Navigator
       initialRouteName={initialRouteName}
       screenOptions={{ headerShown: false }}>
-      <AppStack.Screen component={ParentTabNavigator} name="ParentTabs" />
-      <AppStack.Screen component={ChildHomeScreen} name="ChildHome" />
+      {APP_VARIANT !== 'child' ? (
+        <AppStack.Screen component={ParentTabNavigator} name="ParentTabs" />
+      ) : null}
+      {APP_VARIANT !== 'parent' ? (
+        <AppStack.Screen component={ChildHomeScreen} name="ChildHome" />
+      ) : null}
     </AppStack.Navigator>
   );
 }

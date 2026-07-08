@@ -14,9 +14,8 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
-          add(InstalledAppsPackage())
-          add(AppBlockingPackage())
-          add(UsageStatsPackage())
+          add(AppInfoPackage())
+          addAll(FlavorPackages.list())
         },
     )
   }

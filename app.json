@@ -4,12 +4,16 @@
   "ios": {
     "bundleIdentifier": "org.reactjs.native.example.ParentKey"
   },
+  "android": {
+    "package": "com.parentkey"
+  },
   "plugins": [
     [
       "react-native-device-activity",
       {
         "appGroup": "group.org.reactjs.native.example.ParentKey"
       }
-    ]
+    ],
+    "./plugins/withAndroidFlavors.js"
   ]
 }

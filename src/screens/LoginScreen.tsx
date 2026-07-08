@@ -9,6 +9,7 @@ import {
 } from '../components';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { APP_VARIANT } from '../lib/appInfo';
 import type { AuthStackParamList } from '../navigation/types';
 import type { ColorPalette } from '../theme/colors';
 import { spacing, typography } from '../theme';
@@ -119,16 +120,18 @@ export function LoginScreen({ navigation }: Props) {
         <AuthButton loading={loading} onPress={handleLogin} title="Log in" />
       </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Don't have an account?{' '}
-          <Text
-            style={styles.footerLink}
-            onPress={() => navigation.navigate('Signup')}>
-            Sign up
+      {APP_VARIANT !== 'child' ? (
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Don't have an account?{' '}
+            <Text
+              style={styles.footerLink}
+              onPress={() => navigation.navigate('Signup')}>
+              Sign up
+            </Text>
           </Text>
-        </Text>
-      </View>
+        </View>
+      ) : null}
     </ScreenLayout>
   );
 }

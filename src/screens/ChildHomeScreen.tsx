@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text } from 'react-native';
 import { AndroidAppBlockingPanel } from '../components/android/AndroidAppBlockingPanel';
+import { AndroidPermissionOnboardingModal } from '../components/android/AndroidPermissionOnboardingModal';
 import { AuthButton, ScreenLayout, useScreenStyles } from '../components';
 import { IOSScreenTimeAuthSection } from '../components/ios/IOSScreenTimeAuthSection';
 import { IOSScreenTimePanel } from '../components/ios/IOSScreenTimePanel';
 import { InfoTipCard } from '../components/parent';
 import { useAuth } from '../context/AuthContext';
 import { useChildAppBlocking } from '../hooks/useChildAppBlocking';
+import { openAccessibilitySettings } from '../lib/androidAppBlocking';
+import { openUsageAccessSettings } from '../lib/androidUsageStats';
 import type { IOSScreenTimeAuthorizationStatus } from '../lib/iosScreenTime';
 import { USER_ROLE_LABELS } from '../types/auth';
 import { spacing } from '../theme';
@@ -19,9 +22,25 @@ export function ChildHomeScreen() {
     useState<IOSScreenTimeAuthorizationStatus>('notDetermined');
   const authApproved = authStatus === 'approved';
   const androidBlocking = useChildAppBlocking();
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+  const showOnboarding =
+    Platform.OS === 'android' &&
+    !onboardingDismissed &&
+    (!androidBlocking.accessibilityEnabled ||
+      (androidBlocking.usageStatsSupported &&
+        !androidBlocking.usageAccessGranted));
 
   return (
     <ScreenLayout>
+      <AndroidPermissionOnboardingModal
+        accessibilityEnabled={androidBlocking.accessibilityEnabled}
+        onDismiss={() => setOnboardingDismissed(true)}
+        onEnableAccessibility={openAccessibilitySettings}
+        onEnableUsageAccess={openUsageAccessSettings}
+        usageAccessGranted={androidBlocking.usageAccessGranted}
+        usageStatsSupported={androidBlocking.usageStatsSupported}
+        visible={showOnboarding}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
