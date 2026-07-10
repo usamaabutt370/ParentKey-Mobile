@@ -4,12 +4,22 @@
   "ios": {
     "bundleIdentifier": "org.reactjs.native.example.ParentKey"
   },
+  "android": {
+    "package": "com.parentkey"
+  },
   "plugins": [
     [
       "react-native-device-activity",
       {
         "appGroup": "group.org.reactjs.native.example.ParentKey"
       }
-    ]
+    ],
+    [
+      "expo-camera",
+      {
+        "cameraPermission": "ParentKey Child needs camera access to scan the QR code from your parent's phone."
+      }
+    ],
+    "./plugins/withAndroidFlavors.js"
   ]
 }

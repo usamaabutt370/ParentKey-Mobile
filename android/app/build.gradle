@@ -81,11 +81,23 @@ android {
 
     namespace "com.parentkey"
     defaultConfig {
-        applicationId "com.parentkey"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+    }
+    flavorDimensions "role"
+    productFlavors {
+        parent {
+            dimension "role"
+            applicationId "com.parentkey.parent"
+            resValue "string", "app_name", "ParentKey"
+        }
+        child {
+            dimension "role"
+            applicationId "com.parentkey.child"
+            resValue "string", "app_name", "ParentKey Child"
+        }
     }
     signingConfigs {
         debug {

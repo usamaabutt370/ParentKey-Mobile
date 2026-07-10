@@ -20,6 +20,10 @@ export type ChildrenStackParamList = {
     profile: ChildProfileDraft;
     email: string;
   };
+  PairChildQr: undefined;
+  PairChildSuccess: {
+    childId: string;
+  };
 };
 
 export type ControlsStackParamList = {
