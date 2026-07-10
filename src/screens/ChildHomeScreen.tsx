@@ -11,7 +11,6 @@ import { useChildAppBlocking } from '../hooks/useChildAppBlocking';
 import { openAccessibilitySettings } from '../lib/androidAppBlocking';
 import { openUsageAccessSettings } from '../lib/androidUsageStats';
 import type { IOSScreenTimeAuthorizationStatus } from '../lib/iosScreenTime';
-import { USER_ROLE_LABELS } from '../types/auth';
 import { spacing } from '../theme';
 
 export function ChildHomeScreen() {
@@ -49,7 +48,8 @@ export function ChildHomeScreen() {
           {firstName ? `Hi, ${firstName}` : 'Child dashboard'}
         </Text>
         <Text style={screenStyles.subtitle}>
-          Signed in as {USER_ROLE_LABELS.child} · {session?.user.email}
+          Linked child device
+          {session?.user.email ? ` · ${session.user.email}` : ''}
         </Text>
 
         {Platform.OS === 'ios' ? (

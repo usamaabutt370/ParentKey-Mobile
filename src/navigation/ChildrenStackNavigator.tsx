@@ -7,6 +7,8 @@ import {
   AddChildProfileScreen,
   AddChildSuccessScreen,
 } from '../screens/parent/add-child';
+import { PairChildQrScreen } from '../screens/parent/PairChildQrScreen';
+import { PairChildSuccessScreen } from '../screens/parent/PairChildSuccessScreen';
 import type { ChildrenStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<ChildrenStackParamList>();
@@ -19,6 +21,8 @@ export function ChildrenStackNavigator() {
       <Stack.Screen component={AddChildProfileScreen} name="AddChildProfile" />
       <Stack.Screen component={AddChildAccountScreen} name="AddChildAccount" />
       <Stack.Screen component={AddChildSuccessScreen} name="AddChildSuccess" />
+      <Stack.Screen component={PairChildQrScreen} name="PairChildQr" />
+      <Stack.Screen component={PairChildSuccessScreen} name="PairChildSuccess" />
     </Stack.Navigator>
   );
 }

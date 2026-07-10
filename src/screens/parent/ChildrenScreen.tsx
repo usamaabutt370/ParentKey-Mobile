@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthButton, ScreenLayout, useScreenStyles } from '../../components';
-import { ChildCard, SectionHeader } from '../../components/parent';
+import { ChildCard, LinkChildMethodModal, SectionHeader } from '../../components/parent';
 import { useTheme } from '../../context/ThemeContext';
 import { useParentActivityDashboard } from '../../hooks/useParentActivityDashboard';
 import { useParentChildren } from '../../hooks/useParentChildren';
@@ -16,6 +16,7 @@ export function ParentChildrenScreen({ navigation }: Props) {
   const screenStyles = useScreenStyles();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [linkMethodVisible, setLinkMethodVisible] = useState(false);
   const { children, loading, error } = useParentChildren();
   const { childSummaries, loading: activityLoading } =
     useParentActivityDashboard();
@@ -38,8 +39,22 @@ export function ParentChildrenScreen({ navigation }: Props) {
       </View>
 
       <AuthButton
-        onPress={() => navigation.navigate('AddChildProfile')}
+        onPress={() => setLinkMethodVisible(true)}
         title="Add child"
+      />
+
+      <LinkChildMethodModal
+        onClose={() => setLinkMethodVisible(false)}
+        onSelect={method => {
+          setLinkMethodVisible(false);
+          if (method === 'form') {
+            navigation.navigate('AddChildProfile');
+            return;
+          }
+
+          navigation.navigate('PairChildQr');
+        }}
+        visible={linkMethodVisible}
       />
 
       <View style={styles.section}>
@@ -54,8 +69,8 @@ export function ParentChildrenScreen({ navigation }: Props) {
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>No children linked yet</Text>
             <Text style={styles.emptyBody}>
-              Add a child account so they can sign in on their device with the
-              Child role.
+              Add a child account with a form or link their device instantly
+              using a QR code.
             </Text>
           </View>
         ) : (

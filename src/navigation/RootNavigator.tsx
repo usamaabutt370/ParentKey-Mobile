@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { APP_VARIANT } from '../lib/appInfo';
 import { ChildHomeScreen } from '../screens/ChildHomeScreen';
+import { ChildPairingScreen } from '../screens/child/ChildPairingScreen';
 import { WrongAppScreen } from '../screens/WrongAppScreen';
 import type { ColorPalette } from '../theme/colors';
 import { AuthNavigator } from './AuthNavigator';
@@ -82,6 +83,8 @@ export function RootNavigator() {
         <ResetPasswordScreen />
       ) : session ? (
         <AppStackNavigator />
+      ) : APP_VARIANT === 'child' ? (
+        <ChildPairingScreen />
       ) : (
         <AuthNavigator />
       )}

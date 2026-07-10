@@ -25,6 +25,8 @@ const HIDDEN_TAB_BAR_ROUTES = new Set([
   'AddChildProfile',
   'AddChildAccount',
   'AddChildSuccess',
+  'PairChildQr',
+  'PairChildSuccess',
 ]);
 
 type TabIconName = 'home' | 'users' | 'shield' | 'bar-chart-2' | 'settings';

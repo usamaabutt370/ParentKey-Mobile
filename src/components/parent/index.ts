@@ -3,6 +3,7 @@ export { ActiveBlockRuleCard, BlockedAppRow } from './BlockRuleCard';
 export { AvatarPicker } from './AvatarPicker';
 export { ChildCard } from './ChildCard';
 export { InfoTipCard } from './InfoTipCard';
+export { LinkChildMethodModal } from './LinkChildMethodModal';
 export { RecentAlertsList } from './RecentAlertsList';
 export { ScreenHeader } from './ScreenHeader';
 export { SectionHeader } from './SectionHeader';
