@@ -25,6 +25,7 @@ export type ChildProfile = {
   parentId: string;
   age: number | null;
   avatarId: ChildAvatarId | null;
+  uninstallAllowed: boolean;
   createdAt: string;
   updatedAt: string;
 };

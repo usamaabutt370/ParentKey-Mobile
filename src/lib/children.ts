@@ -18,6 +18,7 @@ type ChildRow = {
   full_name: string | null;
   age: number | null;
   avatar_id: string | null;
+  uninstall_allowed: boolean | null;
   created_at: string;
   updated_at: string;
   profiles: JoinedProfile | JoinedProfile[] | null;
@@ -54,6 +55,7 @@ const CHILD_SELECT = `
   full_name,
   age,
   avatar_id,
+  uninstall_allowed,
   created_at,
   updated_at,
   profiles:profile_id (
@@ -76,6 +78,7 @@ function mapChildRow(row: ChildRow): ChildProfile {
     parentId: row.parent_id,
     age: row.age,
     avatarId: row.avatar_id as ChildAvatarId | null,
+    uninstallAllowed: row.uninstall_allowed === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -212,6 +215,72 @@ function mapCreateChildError(message: string): string {
   }
 
   return message;
+}
+
+export async function setChildUninstallAllowed(params: {
+  parentId: string;
+  childId: string;
+  allowed: boolean;
+}): Promise<{ ok: true } | { ok: false; message: string }> {
+  const verifyResult = await fetchChildById(params.parentId, params.childId);
+
+  if (!verifyResult.ok) {
+    return verifyResult;
+  }
+
+  const { error } = await supabase
+    .from('children')
+    .update({ uninstall_allowed: params.allowed })
+    .eq('parent_id', params.parentId)
+    .eq('profile_id', params.childId);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  return { ok: true };
+}
+
+export async function fetchOwnChildUninstallAllowed(
+  childId: string,
+): Promise<{ ok: true; allowed: boolean } | { ok: false; message: string }> {
+  const { data, error } = await supabase
+    .from('children')
+    .select('uninstall_allowed')
+    .eq('profile_id', childId)
+    .maybeSingle();
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  return { ok: true, allowed: data?.uninstall_allowed === true };
+}
+
+export function subscribeToChildUninstallAllowed(
+  childId: string,
+  onUpdate: (allowed: boolean) => void,
+): () => void {
+  const channel = supabase
+    .channel(`child-uninstall-${childId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'children',
+        filter: `profile_id=eq.${childId}`,
+      },
+      payload => {
+        const next = payload.new as { uninstall_allowed?: boolean };
+        onUpdate(next.uninstall_allowed === true);
+      },
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
 }
 
 export async function deleteChildAccount(params: {
