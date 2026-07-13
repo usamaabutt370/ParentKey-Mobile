@@ -79,6 +79,9 @@ class AppBlockingModule(reactContext: ReactApplicationContext) :
       val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
       intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       reactApplicationContext.startActivity(intent)
+      PermissionReturnWatcher.watch(reactApplicationContext) {
+        isAccessibilityEnabled(reactApplicationContext)
+      }
       promise.resolve(true)
     } catch (error: Exception) {
       promise.reject("OPEN_ACCESSIBILITY_SETTINGS_ERROR", error.message, error)
@@ -111,6 +114,9 @@ class AppBlockingModule(reactContext: ReactApplicationContext) :
           )
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         reactApplicationContext.startActivity(intent)
+        PermissionReturnWatcher.watch(reactApplicationContext) {
+          Settings.canDrawOverlays(reactApplicationContext)
+        }
       }
       promise.resolve(true)
     } catch (error: Exception) {
@@ -150,6 +156,9 @@ class AppBlockingModule(reactContext: ReactApplicationContext) :
             )
           intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
           reactApplicationContext.startActivity(intent)
+          PermissionReturnWatcher.watch(reactApplicationContext) {
+            powerManager.isIgnoringBatteryOptimizations(reactApplicationContext.packageName)
+          }
           promise.resolve(true)
           return
         }
@@ -158,6 +167,15 @@ class AppBlockingModule(reactContext: ReactApplicationContext) :
       val fallback = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
       fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       reactApplicationContext.startActivity(fallback)
+      PermissionReturnWatcher.watch(reactApplicationContext) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+          true
+        } else {
+          val powerManager =
+            reactApplicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+          powerManager.isIgnoringBatteryOptimizations(reactApplicationContext.packageName)
+        }
+      }
       promise.resolve(true)
     } catch (error: Exception) {
       promise.reject("OPEN_BATTERY_SETTINGS_ERROR", error.message, error)
@@ -262,6 +280,12 @@ class AppBlockingModule(reactContext: ReactApplicationContext) :
         "ParentKey needs device admin so this app cannot be removed without your parent's help.",
       )
       activity.startActivity(intent)
+      PermissionReturnWatcher.watch(reactApplicationContext) {
+        val devicePolicyManager =
+          reactApplicationContext.getSystemService(Context.DEVICE_POLICY_SERVICE)
+            as DevicePolicyManager
+        devicePolicyManager.isAdminActive(deviceAdminComponent())
+      }
       promise.resolve(true)
     } catch (error: Exception) {
       promise.reject("REQUEST_DEVICE_ADMIN_ERROR", error.message, error)

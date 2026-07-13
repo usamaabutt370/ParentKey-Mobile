@@ -160,10 +160,22 @@ export async function claimPairingWithToken(
   });
 
   if (error) {
+    // Signup can report a 500 even when the child session was created (e.g. duplicate
+    // scan). Prefer an active session over failing the claim UI.
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData.session) {
+      return { ok: true };
+    }
+
     return { ok: false, message: mapPairingClaimError(error.message) };
   }
 
   if (!data.session) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData.session) {
+      return { ok: true };
+    }
+
     return {
       ok: false,
       message:
@@ -210,5 +222,14 @@ function mapPairingClaimError(message: string): string {
     return 'This device is already linked. Sign out and try again, or ask your parent for a new QR code.';
   }
 
-  return message;
+  if (
+    lowerMessage.includes('500') ||
+    lowerMessage.includes('database error') ||
+    lowerMessage.includes('internal server') ||
+    lowerMessage.includes('status code')
+  ) {
+    return 'Could not link this device. Ask your parent for a new QR code and try again.';
+  }
+
+  return 'Could not link this device. Please try scanning again.';
 }

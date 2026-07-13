@@ -10,6 +10,7 @@ import { ChildHomeScreen } from '../screens/ChildHomeScreen';
 import { ChildConsentScreen } from '../screens/child/ChildConsentScreen';
 import { ChildDeviceSyncScreen } from '../screens/child/ChildDeviceSyncScreen';
 import { ChildPermissionsScreen } from '../screens/child/ChildPermissionsScreen';
+import { ChildProfileSetupScreen } from '../screens/child/ChildProfileSetupScreen';
 import type { ChildStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<ChildStackParamList>();
@@ -58,6 +59,7 @@ export function ChildStackNavigator() {
       initialRouteName={initialRoute}
       screenOptions={{ headerShown: false }}>
       <Stack.Screen component={ChildConsentScreen} name="ChildConsent" />
+      <Stack.Screen component={ChildProfileSetupScreen} name="ChildProfileSetup" />
       <Stack.Screen component={ChildPermissionsScreen} name="ChildPermissions" />
       <Stack.Screen component={ChildDeviceSyncScreen} name="ChildDeviceSync" />
       <Stack.Screen component={ChildHomeScreen} name="ChildHome" />

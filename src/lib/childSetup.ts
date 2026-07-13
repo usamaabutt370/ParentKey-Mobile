@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { clearChildAppInventoryCache } from './childAppInventoryCache';
 
-const SETUP_VERSION = 'v2';
+const SETUP_VERSION = 'v3';
 
 function setupKey(childId: string): string {
   return `child_setup_${SETUP_VERSION}_${childId}`;

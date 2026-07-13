@@ -47,6 +47,7 @@ export type ParentTabParamList = {
 
 export type ChildStackParamList = {
   ChildConsent: undefined;
+  ChildProfileSetup: undefined;
   ChildPermissions: undefined;
   ChildDeviceSync: undefined;
   ChildHome: undefined;

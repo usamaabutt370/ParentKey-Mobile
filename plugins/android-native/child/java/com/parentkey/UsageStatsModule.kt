@@ -1,5 +1,6 @@
 package com.parentkey
 
+import android.Manifest
 import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
 import android.content.Intent
@@ -37,11 +38,28 @@ class UsageStatsModule(reactContext: ReactApplicationContext) :
   @ReactMethod
   fun openUsageAccessSettings(promise: Promise) {
     try {
+      // Prepare return watcher before leaving the app — usage access is a slow,
+      // multi-step Settings flow and needs a privileged PendingIntent.
+      PermissionReturnWatcher.watch(
+        reactApplicationContext,
+        appOp = AppOpsManager.OPSTR_GET_USAGE_STATS,
+      ) { hasUsageAccess() }
+
       val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-      reactApplicationContext.startActivity(intent)
+      intent.putExtra(Intent.EXTRA_PACKAGE_NAME, reactApplicationContext.packageName)
+
+      val activity = reactApplicationContext.currentActivity
+      if (activity != null) {
+        // Same task so CLEAR_TOP can dismiss Settings when access is granted.
+        activity.startActivity(intent)
+      } else {
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        reactApplicationContext.startActivity(intent)
+      }
+
       promise.resolve(true)
     } catch (error: Exception) {
+      PermissionReturnWatcher.stop()
       promise.reject("OPEN_USAGE_ACCESS_SETTINGS_ERROR", error.message, error)
     }
   }
@@ -143,7 +161,14 @@ class UsageStatsModule(reactContext: ReactApplicationContext) :
         )
       }
 
-    return mode == AppOpsManager.MODE_ALLOWED
+    return when (mode) {
+      AppOpsManager.MODE_ALLOWED -> true
+      AppOpsManager.MODE_DEFAULT ->
+        reactApplicationContext.checkCallingOrSelfPermission(
+          Manifest.permission.PACKAGE_USAGE_STATS,
+        ) == PackageManager.PERMISSION_GRANTED
+      else -> false
+    }
   }
 
   private fun aggregateForegroundUsage(

@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   StyleSheet,
   Switch,
   Text,
@@ -325,9 +326,13 @@ export function ChildDetailScreen({ navigation, route }: Props) {
                 styles.avatar,
                 { backgroundColor: avatar?.background ?? colors.background.accentStrong },
               ]}>
-              <Text style={styles.avatarEmoji}>
-                {avatar?.emoji ?? displayName.charAt(0).toUpperCase()}
-              </Text>
+              {child?.avatarUrl ? (
+                <Image source={{ uri: child.avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarEmoji}>
+                  {avatar?.emoji ?? displayName.charAt(0).toUpperCase()}
+                </Text>
+              )}
             </View>
             <Text style={styles.heroName}>{displayName}</Text>
             {child.email ? (
@@ -513,6 +518,11 @@ function createStyles(colors: ColorPalette) {
       borderRadius: radii.pill,
       height: 88,
       justifyContent: 'center',
+      overflow: 'hidden',
+      width: 88,
+    },
+    avatarImage: {
+      height: 88,
       width: 88,
     },
     avatarEmoji: {

@@ -1,13 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthButton, ScreenLayout } from '../../components';
 import { InfoTipCard } from '../../components/parent';
 import { ChildSetupStepLayout } from '../../components/child/ChildSetupStepLayout';
 import { CHILD_SETUP_TOTAL_STEPS } from '../../constants/childSetup';
-import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { resetChildSession } from '../../lib/childLink';
 import type { ChildStackParamList } from '../../navigation/types';
 import type { ColorPalette } from '../../theme/colors';
 import { spacing, typography } from '../../theme';
@@ -23,17 +21,6 @@ const CONSENT_POINTS = [
 export function ChildConsentScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { session, signOut } = useAuth();
-  const [resetting, setResetting] = useState(false);
-
-  const handleStartOver = async () => {
-    setResetting(true);
-    try {
-      await resetChildSession({ childId: session?.user.id, signOut });
-    } finally {
-      setResetting(false);
-    }
-  };
 
   return (
     <ScreenLayout
@@ -58,14 +45,8 @@ export function ChildConsentScreen({ navigation }: Props) {
         <InfoTipCard message="ParentKey cannot be installed without your knowledge. You control the permissions on this phone." />
 
         <AuthButton
-          onPress={() => navigation.navigate('ChildPermissions')}
+          onPress={() => navigation.navigate('ChildProfileSetup')}
           title="I agree, continue"
-        />
-        <AuthButton
-          loading={resetting}
-          onPress={() => void handleStartOver()}
-          title="Start over / scan new QR"
-          variant="secondary"
         />
       </ChildSetupStepLayout>
     </ScreenLayout>

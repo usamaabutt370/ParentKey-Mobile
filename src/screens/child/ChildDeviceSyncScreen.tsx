@@ -26,6 +26,7 @@ export function ChildDeviceSyncScreen({ navigation }: Props) {
     autoSync: false,
   });
   const [phase, setPhase] = useState<SyncPhase>('registering');
+  const [goingHome, setGoingHome] = useState(false);
   const hasStartedRef = useRef(false);
 
   useEffect(() => {
@@ -63,11 +64,31 @@ export function ChildDeviceSyncScreen({ navigation }: Props) {
           ? `Found ${installedApps.length} apps. Your parent can now manage this device.`
           : error ?? 'Could not sync device information.';
 
-  const handleFinish = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'ChildHome' }],
-    });
+  const handleFinish = async () => {
+    if (goingHome) {
+      return;
+    }
+
+    setGoingHome(true);
+    try {
+      if (childId) {
+        await markChildSetupComplete(childId);
+      }
+
+      // Let the button loader paint before ChildHome mounts.
+      await new Promise<void>(resolve => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve());
+        });
+      });
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'ChildHome' }],
+      });
+    } catch {
+      setGoingHome(false);
+    }
   };
 
   const handleRetry = async () => {
@@ -100,7 +121,11 @@ export function ChildDeviceSyncScreen({ navigation }: Props) {
         </View>
 
         {phase === 'done' ? (
-          <AuthButton onPress={handleFinish} title="Go to home" />
+          <AuthButton
+            loading={goingHome}
+            onPress={() => void handleFinish()}
+            title="Go to home"
+          />
         ) : phase === 'error' ? (
           <AuthButton onPress={() => void handleRetry()} title="Try again" />
         ) : null}

@@ -4,16 +4,14 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthButton, ScreenLayout } from '../../components';
 import { ChildSetupStepLayout } from '../../components/child/ChildSetupStepLayout';
 import { CHILD_SETUP_TOTAL_STEPS } from '../../constants/childSetup';
-import { useAuth } from '../../context/AuthContext';
 import {
   getChildPermissionSteps,
   type ChildPermissionKey,
 } from '../../lib/childPermissions';
-import { resetChildSession } from '../../lib/childLink';
 import type { ChildStackParamList } from '../../navigation/types';
 import { useTheme } from '../../context/ThemeContext';
 import type { ColorPalette } from '../../theme/colors';
-import { radii, spacing, typography } from '../../theme';
+import { spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<ChildStackParamList, 'ChildPermissions'>;
 
@@ -34,12 +32,10 @@ function findFirstUngrantedIndex(
 export function ChildPermissionsScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { session, signOut } = useAuth();
   const steps = useMemo(() => getChildPermissionSteps(), []);
   const [stepIndex, setStepIndex] = useState(0);
   const [checking, setChecking] = useState(true);
   const [continuing, setContinuing] = useState(false);
-  const [resetting, setResetting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [grantedFlags, setGrantedFlags] = useState<
     Record<ChildPermissionKey, boolean>
@@ -51,6 +47,10 @@ export function ChildPermissionsScreen({ navigation }: Props) {
     deviceAdmin: false,
   });
   const hasBootstrappedRef = useRef(false);
+  const awaitingPermissionRef = useRef(false);
+
+  const step = steps[stepIndex];
+  const currentGranted = step ? grantedFlags[step.key] : false;
 
   const refreshStatuses = useCallback(async () => {
     const entries = await Promise.all(
@@ -70,13 +70,20 @@ export function ChildPermissionsScreen({ navigation }: Props) {
       const nextIndex = findFirstUngrantedIndex(steps, statuses, fromIndex);
 
       if (nextIndex === -1) {
+        awaitingPermissionRef.current = false;
+        setContinuing(false);
         navigation.replace('ChildDeviceSync');
         return;
       }
 
+      if (nextIndex !== stepIndex) {
+        awaitingPermissionRef.current = false;
+        setContinuing(false);
+      }
+
       setStepIndex(nextIndex);
     },
-    [navigation, steps],
+    [navigation, stepIndex, steps],
   );
 
   useEffect(() => {
@@ -108,69 +115,70 @@ export function ChildPermissionsScreen({ navigation }: Props) {
       }
 
       void refreshStatuses().then(statuses => {
-        advancePastGranted(statuses, stepIndex);
+        const key = steps[stepIndex]?.key;
+        if (!key) {
+          return;
+        }
+
+        if (statuses[key]) {
+          advancePastGranted(statuses, stepIndex);
+          return;
+        }
+
+        // Returned from Settings without granting — stop loader so they can retry.
+        if (awaitingPermissionRef.current) {
+          awaitingPermissionRef.current = false;
+          setContinuing(false);
+        }
       });
     });
 
     return () => subscription.remove();
-  }, [advancePastGranted, refreshStatuses, stepIndex]);
+  }, [advancePastGranted, refreshStatuses, stepIndex, steps]);
 
-  const step = steps[stepIndex];
-  const currentGranted = step ? grantedFlags[step.key] : false;
+  // While waiting on a permission, keep checking so auto-return from Settings
+  // advances even if AppState is slow or missed on some devices.
+  useEffect(() => {
+    if (checking || !step || grantedFlags[step.key]) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      void refreshStatuses().then(statuses => {
+        if (statuses[step.key]) {
+          advancePastGranted(statuses, stepIndex);
+        }
+      });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [
+    advancePastGranted,
+    checking,
+    grantedFlags,
+    refreshStatuses,
+    step,
+    stepIndex,
+  ]);
 
   const handleOpenSettings = async () => {
-    if (!step) {
+    if (!step || continuing) {
       return;
     }
 
     setActionError(null);
+    awaitingPermissionRef.current = true;
     setContinuing(true);
     try {
       await step.openSettings();
     } catch (error) {
+      awaitingPermissionRef.current = false;
+      setContinuing(false);
       const message =
         error instanceof Error
           ? error.message
           : 'Could not open settings. Please try again.';
       setActionError(message);
-    } finally {
-      setContinuing(false);
-    }
-  };
-
-  const handleOpenSecondarySettings = async () => {
-    if (!step?.openSecondarySettings) {
-      return;
-    }
-
-    setContinuing(true);
-    try {
-      await step.openSecondarySettings();
-    } finally {
-      setContinuing(false);
-    }
-  };
-
-  const handleContinue = async () => {
-    if (!step) {
-      return;
-    }
-
-    const statuses = await refreshStatuses();
-
-    if (!statuses[step.key]) {
-      return;
-    }
-
-    advancePastGranted(statuses, stepIndex + 1);
-  };
-
-  const handleStartOver = async () => {
-    setResetting(true);
-    try {
-      await resetChildSession({ childId: session?.user.id, signOut });
-    } finally {
-      setResetting(false);
     }
   };
 
@@ -185,59 +193,32 @@ export function ChildPermissionsScreen({ navigation }: Props) {
 
   return (
     <ScreenLayout
-      safeAreaEdges={['top', 'left', 'right', 'bottom']}
-      scrollable
+      safeAreaEdges={['top', 'left', 'right']}
       contentStyle={styles.content}>
-      <ChildSetupStepLayout
-        currentStep={stepIndex + 2}
-        icon={step.icon}
-        subtitle={step.description}
-        title={step.title}
-        totalSteps={CHILD_SETUP_TOTAL_STEPS}>
-        <View
-          style={[
-            styles.statusCard,
-            currentGranted ? styles.statusGranted : styles.statusPending,
-          ]}>
-          <Text style={styles.statusLabel}>
-            {currentGranted ? 'Permission granted' : 'Waiting for permission'}
-          </Text>
+      <View style={styles.root}>
+        <View style={styles.setupContent}>
+          <ChildSetupStepLayout
+            currentStep={stepIndex + 3}
+            icon={step.icon}
+            subtitle={step.description}
+            title={step.title}
+            totalSteps={CHILD_SETUP_TOTAL_STEPS}>
+            {actionError ? (
+              <Text style={styles.errorText}>{actionError}</Text>
+            ) : null}
+          </ChildSetupStepLayout>
         </View>
 
         {!currentGranted ? (
-          <AuthButton
-            loading={continuing}
-            onPress={() => void handleOpenSettings()}
-            title={step.buttonTitle}
-          />
+          <View style={styles.footer}>
+            <AuthButton
+              loading={continuing}
+              onPress={() => void handleOpenSettings()}
+              title={step.buttonTitle}
+            />
+          </View>
         ) : null}
-        {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
-        {!currentGranted && step.secondaryButtonTitle ? (
-          <AuthButton
-            loading={continuing}
-            onPress={() => void handleOpenSecondarySettings()}
-            title={step.secondaryButtonTitle}
-            variant="secondary"
-          />
-        ) : null}
-        {currentGranted ? (
-          <AuthButton
-            onPress={() => void handleContinue()}
-            title="Continue"
-            variant="secondary"
-          />
-        ) : (
-          <Text style={styles.hint} onPress={() => void refreshStatuses()}>
-            I turned it on — check again
-          </Text>
-        )}
-        <AuthButton
-          loading={resetting}
-          onPress={() => void handleStartOver()}
-          title="Start over / scan new QR"
-          variant="secondary"
-        />
-      </ChildSetupStepLayout>
+      </View>
     </ScreenLayout>
   );
 }
@@ -245,8 +226,20 @@ export function ChildPermissionsScreen({ navigation }: Props) {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     content: {
-      flexGrow: 1,
-      paddingBottom: spacing.lg,
+      flex: 1,
+    },
+    root: {
+      flex: 1,
+    },
+    setupContent: {
+      flex: 1,
+      paddingBottom: 160,
+    },
+    footer: {
+      bottom: 100,
+      left: 0,
+      position: 'absolute',
+      right: 0,
     },
     loading: {
       alignItems: 'center',
@@ -257,30 +250,6 @@ function createStyles(colors: ColorPalette) {
     loadingText: {
       ...typography.subtitle,
       color: colors.text.secondary,
-      textAlign: 'center',
-    },
-    statusCard: {
-      borderRadius: radii.md,
-      borderWidth: 1,
-      padding: spacing.md,
-    },
-    statusPending: {
-      backgroundColor: colors.input.background,
-      borderColor: colors.border.default,
-    },
-    statusGranted: {
-      backgroundColor: colors.background.accentStrong,
-      borderColor: colors.brand.teal,
-    },
-    statusLabel: {
-      ...typography.label,
-      color: colors.text.primary,
-      textAlign: 'center',
-    },
-    hint: {
-      ...typography.caption,
-      color: colors.text.brand,
-      fontWeight: '600',
       textAlign: 'center',
     },
     errorText: {

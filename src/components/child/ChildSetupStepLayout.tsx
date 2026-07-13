@@ -7,7 +7,7 @@ import { radii, spacing, typography } from '../../theme';
 type Props = {
   children: React.ReactNode;
   currentStep: number;
-  icon: string;
+  icon?: string | null;
   subtitle: string;
   title: string;
   totalSteps: number;
@@ -42,7 +42,7 @@ export function ChildSetupStepLayout({
       <Text style={styles.eyebrow}>
         Step {currentStep} of {totalSteps}
       </Text>
-      <Text style={styles.icon}>{icon}</Text>
+      {icon ? <Text style={styles.icon}>{icon}</Text> : null}
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.subtitle}>{subtitle}</Text>
       <View style={styles.body}>{children}</View>
@@ -55,7 +55,8 @@ function createStyles(colors: ColorPalette) {
     container: {
       flex: 1,
       gap: spacing.md,
-      justifyContent: 'center',
+      justifyContent: 'flex-start',
+      paddingTop: spacing.sm,
     },
     progressRow: {
       flexDirection: 'row',
