@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { getChildAvatar } from '../../constants/childAvatars';
 import { useTheme } from '../../context/ThemeContext';
@@ -25,6 +25,14 @@ export function ChildCard({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const avatar = getChildAvatar(child.avatarId ?? undefined);
   const displayName = getChildDisplayName(child);
+  const photoUrl = child.avatarUrl?.trim() || null;
+  const [photoFailed, setPhotoFailed] = useState(false);
+
+  useEffect(() => {
+    setPhotoFailed(false);
+  }, [photoUrl]);
+
+  const showPhoto = Boolean(photoUrl) && !photoFailed;
   const subtitle = child.email ?? 'Linked account';
   const meta = screenTimeToday
     ? `${screenTimeToday} today`
@@ -44,11 +52,23 @@ export function ChildCard({
         <View
           style={[
             styles.avatar,
-            { backgroundColor: avatar?.background ?? colors.background.accentStrong },
+            {
+              backgroundColor:
+                avatar?.background ?? colors.background.accentStrong,
+            },
           ]}>
-          <Text style={styles.avatarText}>
-            {avatar?.emoji ?? displayName.charAt(0).toUpperCase()}
-          </Text>
+          {showPhoto ? (
+            <Image
+              onError={() => setPhotoFailed(true)}
+              resizeMode="cover"
+              source={{ uri: photoUrl! }}
+              style={styles.avatarImage}
+            />
+          ) : (
+            <Text style={styles.avatarText}>
+              {avatar?.emoji ?? displayName.charAt(0).toUpperCase()}
+            </Text>
+          )}
         </View>
         <View style={styles.info}>
           <Text style={styles.name}>{displayName}</Text>
@@ -99,9 +119,15 @@ function createStyles(colors: ColorPalette) {
     },
     avatar: {
       alignItems: 'center',
-      borderRadius: radii.pill,
+      borderRadius: 22,
       height: 44,
       justifyContent: 'center',
+      overflow: 'hidden',
+      width: 44,
+    },
+    avatarImage: {
+      borderRadius: 22,
+      height: 44,
       width: 44,
     },
     avatarText: {

@@ -2,7 +2,9 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -30,7 +32,12 @@ import {
   buildTopAppsForDate,
   fetchChildAppUsage,
 } from '../../lib/appUsage';
-import { fetchChildById, getChildDisplayName, deleteChildAccount } from '../../lib/children';
+import {
+  fetchChildById,
+  getChildDisplayName,
+  deleteChildAccount,
+  setChildUninstallAllowed,
+} from '../../lib/children';
 import {
   buildAppIconLookup,
   mergeInstalledAppIcons,
@@ -78,6 +85,7 @@ export function ChildDetailScreen({ navigation, route }: Props) {
     null,
   );
   const [deleting, setDeleting] = useState(false);
+  const [updatingUninstall, setUpdatingUninstall] = useState(false);
 
   const loadChild = useCallback(async () => {
     const parentId = session?.user.id;
@@ -242,6 +250,52 @@ export function ChildDetailScreen({ navigation, route }: Props) {
     );
   };
 
+  const handleToggleUninstallAllowed = (allowed: boolean) => {
+    const parentId = session?.user.id;
+    if (!parentId || !child) {
+      return;
+    }
+
+    const applyChange = async () => {
+      setUpdatingUninstall(true);
+      const previous = child.uninstallAllowed;
+      setChild({ ...child, uninstallAllowed: allowed });
+
+      const result = await setChildUninstallAllowed({
+        parentId,
+        childId,
+        allowed,
+      });
+
+      setUpdatingUninstall(false);
+
+      if (!result.ok) {
+        setChild({ ...child, uninstallAllowed: previous });
+        Alert.alert('Could not update setting', result.message);
+      }
+    };
+
+    if (allowed) {
+      Alert.alert(
+        'Allow uninstall?',
+        'This lets the child device turn off uninstall protection so ParentKey Child can be removed. Turn this off again when you want protection restored.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Allow',
+            style: 'destructive',
+            onPress: () => {
+              void applyChange();
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    void applyChange();
+  };
+
   const avatar = getChildAvatar(child?.avatarId ?? undefined);
   const displayName = child ? getChildDisplayName(child) : 'Child';
 
@@ -272,9 +326,13 @@ export function ChildDetailScreen({ navigation, route }: Props) {
                 styles.avatar,
                 { backgroundColor: avatar?.background ?? colors.background.accentStrong },
               ]}>
-              <Text style={styles.avatarEmoji}>
-                {avatar?.emoji ?? displayName.charAt(0).toUpperCase()}
-              </Text>
+              {child?.avatarUrl ? (
+                <Image source={{ uri: child.avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarEmoji}>
+                  {avatar?.emoji ?? displayName.charAt(0).toUpperCase()}
+                </Text>
+              )}
             </View>
             <Text style={styles.heroName}>{displayName}</Text>
             {child.email ? (
@@ -314,6 +372,35 @@ export function ChildDetailScreen({ navigation, route }: Props) {
             ) : (
               <InfoTipCard message="Activity appears after the child device syncs app usage." />
             )}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Device protection</Text>
+            <View style={styles.protectionCard}>
+              <View style={styles.protectionCopy}>
+                <Text style={styles.protectionTitle}>Allow app uninstall</Text>
+                <Text style={styles.protectionBody}>
+                  When on, the child device can deactivate Device Admin and
+                  uninstall ParentKey Child.
+                </Text>
+              </View>
+              <Switch
+                disabled={updatingUninstall}
+                onValueChange={handleToggleUninstallAllowed}
+                trackColor={{
+                  false: colors.border.default,
+                  true: colors.brand.teal,
+                }}
+                value={child.uninstallAllowed}
+              />
+            </View>
+            <InfoTipCard
+              message={
+                child.uninstallAllowed
+                  ? 'Uninstall is currently allowed. Turn this off after the child reinstalls or when you want protection again.'
+                  : 'Keep this off to make ParentKey Child harder to remove without your permission.'
+              }
+            />
           </View>
 
           <View style={styles.section}>
@@ -431,6 +518,11 @@ function createStyles(colors: ColorPalette) {
       borderRadius: radii.pill,
       height: 88,
       justifyContent: 'center',
+      overflow: 'hidden',
+      width: 88,
+    },
+    avatarImage: {
+      height: 88,
       width: 88,
     },
     avatarEmoji: {
@@ -466,6 +558,30 @@ function createStyles(colors: ColorPalette) {
       ...typography.label,
       color: colors.text.primary,
       fontSize: 18,
+    },
+    protectionCard: {
+      alignItems: 'center',
+      backgroundColor: colors.input.background,
+      borderColor: colors.border.default,
+      borderRadius: radii.lg,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: spacing.md,
+      padding: spacing.md,
+    },
+    protectionCopy: {
+      flex: 1,
+      gap: spacing.xs,
+    },
+    protectionTitle: {
+      ...typography.label,
+      color: colors.text.primary,
+      fontSize: 16,
+    },
+    protectionBody: {
+      ...typography.caption,
+      color: colors.text.secondary,
+      lineHeight: 18,
     },
     syncMeta: {
       ...typography.caption,

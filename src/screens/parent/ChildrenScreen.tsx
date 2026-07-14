@@ -26,6 +26,8 @@ export function ParentChildrenScreen({ navigation }: Props) {
     [childSummaries],
   );
 
+  const openLinkMethod = () => setLinkMethodVisible(true);
+
   return (
     <ScreenLayout
       safeAreaEdges={['top', 'left', 'right']}
@@ -38,10 +40,7 @@ export function ParentChildrenScreen({ navigation }: Props) {
         </Text>
       </View>
 
-      <AuthButton
-        onPress={() => setLinkMethodVisible(true)}
-        title="Add child"
-      />
+      <AuthButton onPress={openLinkMethod} title="Add child" />
 
       <LinkChildMethodModal
         onClose={() => setLinkMethodVisible(false)}
@@ -72,6 +71,7 @@ export function ParentChildrenScreen({ navigation }: Props) {
               Add a child account with a form or link their device instantly
               using a QR code.
             </Text>
+            <AuthButton onPress={openLinkMethod} title="Add child" />
           </View>
         ) : (
           <View style={styles.childList}>
@@ -105,6 +105,7 @@ function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     content: {
       gap: spacing.xl,
+      paddingBottom: spacing.xxl,
     },
     section: {
       gap: spacing.md,
@@ -126,7 +127,7 @@ function createStyles(colors: ColorPalette) {
       borderColor: colors.border.default,
       borderRadius: 12,
       borderWidth: 1,
-      gap: spacing.sm,
+      gap: spacing.md,
       padding: spacing.lg,
     },
     emptyTitle: {

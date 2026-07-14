@@ -20,6 +20,13 @@
         "cameraPermission": "ParentKey Child needs camera access to scan the QR code from your parent's phone."
       }
     ],
+    [
+      "expo-image-picker",
+      {
+        "photosPermission": "ParentKey Child needs photo library access so you can choose a profile picture.",
+        "cameraPermission": "ParentKey Child needs camera access so you can take a profile picture."
+      }
+    ],
     "./plugins/withAndroidFlavors.js"
   ]
 }

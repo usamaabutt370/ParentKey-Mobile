@@ -18,10 +18,19 @@ import {
   syncChildInstalledApps,
 } from '../lib/appRules';
 import { syncChildAppUsage } from '../lib/appUsage';
+import {
+  getChildAppInventoryCache,
+  hasRecentChildAppInventorySync,
+  saveChildAppInventoryCache,
+} from '../lib/childAppInventoryCache';
 import { fetchInstalledApps } from '../lib/installedApps';
 import { resolveIconBase64ForSync } from '../lib/iconCache';
 import { supabase } from '../lib/supabase';
 import type { InstalledApp } from '../types/installedApp';
+
+type ChildAppBlockingOptions = {
+  autoSync?: boolean;
+};
 
 type ChildAppBlockingState = {
   supported: boolean;
@@ -37,25 +46,47 @@ type ChildAppBlockingState = {
   error: string | null;
   refreshAccessibilityStatus: () => Promise<void>;
   refreshUsageAccessStatus: () => Promise<void>;
-  syncNow: () => Promise<void>;
+  syncNow: () => Promise<{ ok: true } | { ok: false; message: string }>;
 };
 
-export function useChildAppBlocking(): ChildAppBlockingState {
+function getInitialInventory(childId: string | undefined) {
+  if (!childId) {
+    return null;
+  }
+
+  return getChildAppInventoryCache(childId);
+}
+
+export function useChildAppBlocking(
+  options: ChildAppBlockingOptions = {},
+): ChildAppBlockingState {
+  const { autoSync = true } = options;
   const { session } = useAuth();
   const childId = session?.user.id;
+  const cachedInventory = getInitialInventory(childId);
   const [supported] = useState(isAndroidAppBlockingSupported());
   const [usageStatsSupported] = useState(isAndroidUsageStatsSupported());
   const [accessibilityEnabled, setAccessibilityEnabled] = useState(false);
   const [usageAccessGranted, setUsageAccessGranted] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [blockedCount, setBlockedCount] = useState(0);
-  const [blockedPackages, setBlockedPackages] = useState<string[]>([]);
-  const [installedApps, setInstalledApps] = useState<InstalledApp[]>([]);
+  const [blockedCount, setBlockedCount] = useState(
+    cachedInventory?.blockedCount ?? 0,
+  );
+  const [blockedPackages, setBlockedPackages] = useState<string[]>(
+    cachedInventory?.blockedPackages ?? [],
+  );
+  const [installedApps, setInstalledApps] = useState<InstalledApp[]>(
+    cachedInventory?.installedApps ?? [],
+  );
   const [appsLoading, setAppsLoading] = useState(false);
-  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(
+    cachedInventory?.lastSyncedAt ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
-  const deviceIdRef = useRef<string | null>(null);
-  const usageTrackingStartedRef = useRef<string | null>(null);
+  const deviceIdRef = useRef<string | null>(cachedInventory?.deviceId ?? null);
+  const usageTrackingStartedRef = useRef<string | null>(
+    cachedInventory?.usageTrackingStartedAt ?? null,
+  );
 
   const refreshAccessibilityStatus = useCallback(async () => {
     if (!supported) {
@@ -142,26 +173,29 @@ export function useChildAppBlocking(): ChildAppBlockingState {
     }
   }, [supported]);
 
-  const applyBlockRules = useCallback(async () => {
+  const applyBlockRules = useCallback(async (): Promise<string[]> => {
     if (!childId || !supported) {
-      return;
+      return [];
     }
 
     const rulesResult = await fetchChildBlockRules(childId);
     if (!rulesResult.ok) {
       setError(rulesResult.message);
-      return;
+      return [];
     }
 
     const packageNames = rulesResult.rules.map(rule => rule.packageName);
     await setNativeBlockedPackages(packageNames);
     setBlockedPackages(packageNames);
     setBlockedCount(packageNames.length);
+    return packageNames;
   }, [childId, supported]);
 
-  const syncNow = useCallback(async () => {
+  const syncNow = useCallback(async (): Promise<
+    { ok: true } | { ok: false; message: string }
+  > => {
     if (!childId || !supported || Platform.OS !== 'android') {
-      return;
+      return { ok: false, message: 'Device sync is only available on Android.' };
     }
 
     setSyncing(true);
@@ -178,7 +212,7 @@ export function useChildAppBlocking(): ChildAppBlockingState {
 
       if (!deviceResult.ok) {
         setError(deviceResult.message);
-        return;
+        return deviceResult;
       }
 
       deviceIdRef.current = deviceResult.device.id;
@@ -206,22 +240,34 @@ export function useChildAppBlocking(): ChildAppBlockingState {
 
       if (!syncResult.ok) {
         setError(syncResult.message);
-        return;
+        return syncResult;
       }
 
-      await applyBlockRules();
+      const packageNames = await applyBlockRules();
       await syncUsageStats(
         childId,
         deviceResult.device.id,
         deviceResult.device.usageTrackingStartedAt,
       );
-      setLastSyncedAt(new Date().toISOString());
+      const syncedAt = new Date().toISOString();
+      setLastSyncedAt(syncedAt);
+      saveChildAppInventoryCache({
+        childId,
+        installedApps: installedResult.apps,
+        blockedPackages: packageNames,
+        blockedCount: packageNames.length,
+        lastSyncedAt: syncedAt,
+        deviceId: deviceResult.device.id,
+        usageTrackingStartedAt: usageTrackingStartedRef.current,
+      });
+      return { ok: true };
     } catch (syncError) {
       const message =
         syncError instanceof Error
           ? syncError.message
           : 'Could not sync apps and rules.';
       setError(message);
+      return { ok: false, message };
     } finally {
       setSyncing(false);
     }
@@ -233,13 +279,34 @@ export function useChildAppBlocking(): ChildAppBlockingState {
   }, [refreshAccessibilityStatus, refreshUsageAccessStatus]);
 
   useEffect(() => {
-    if (!childId || !supported) {
+    if (!childId || !supported || !autoSync) {
+      return;
+    }
+
+    if (hasRecentChildAppInventorySync(childId)) {
+      const recent = getChildAppInventoryCache(childId);
+      if (recent) {
+        setInstalledApps(recent.installedApps);
+        setBlockedPackages(recent.blockedPackages);
+        setBlockedCount(recent.blockedCount);
+        setLastSyncedAt(recent.lastSyncedAt);
+        deviceIdRef.current = recent.deviceId;
+        usageTrackingStartedRef.current = recent.usageTrackingStartedAt;
+      }
+      void applyBlockRules();
       return;
     }
 
     void loadInstalledApps();
     void syncNow();
-  }, [childId, loadInstalledApps, supported, syncNow]);
+  }, [
+    applyBlockRules,
+    autoSync,
+    childId,
+    loadInstalledApps,
+    supported,
+    syncNow,
+  ]);
 
   useEffect(() => {
     if (!childId || !supported) {
@@ -266,7 +333,6 @@ export function useChildAppBlocking(): ChildAppBlockingState {
       if (state === 'active') {
         void refreshAccessibilityStatus();
         void refreshUsageAccessStatus();
-        void loadInstalledApps();
         void applyBlockRules();
 
         if (deviceIdRef.current && childId) {
@@ -286,7 +352,6 @@ export function useChildAppBlocking(): ChildAppBlockingState {
   }, [
     applyBlockRules,
     childId,
-    loadInstalledApps,
     refreshAccessibilityStatus,
     refreshUsageAccessStatus,
     supported,

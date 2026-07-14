@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {
   CameraView,
@@ -19,33 +19,36 @@ export function ChildPairingScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [handledToken, setHandledToken] = useState<string | null>(null);
+  const claimingRef = useRef(false);
+  const handledTokenRef = useRef<string | null>(null);
 
-  const handleScan = useCallback(
-    async (result: BarcodeScanningResult) => {
-      if (claiming) {
-        return;
-      }
+  const handleScan = useCallback(async (result: BarcodeScanningResult) => {
+    if (claimingRef.current) {
+      return;
+    }
 
-      const token = parsePairingTokenFromQr(result.data);
-      if (!token || token === handledToken) {
-        return;
-      }
+    const token = parsePairingTokenFromQr(result.data);
+    if (!token || token === handledTokenRef.current) {
+      return;
+    }
 
-      setHandledToken(token);
-      setClaiming(true);
-      setError(null);
+    handledTokenRef.current = token;
+    claimingRef.current = true;
+    setClaiming(true);
+    setError(null);
 
-      const claimResult = await claimPairingWithToken(token);
-      setClaiming(false);
+    const claimResult = await claimPairingWithToken(token);
 
-      if (!claimResult.ok) {
-        setError(claimResult.message);
-        setHandledToken(null);
-      }
-    },
-    [claiming, handledToken],
-  );
+    if (claimResult.ok) {
+      // Auth state will navigate away; keep scanner locked.
+      return;
+    }
+
+    claimingRef.current = false;
+    handledTokenRef.current = null;
+    setClaiming(false);
+    setError(claimResult.message);
+  }, []);
 
   if (!permission) {
     return (
@@ -57,25 +60,31 @@ export function ChildPairingScreen() {
 
   if (!permission.granted) {
     return (
-      <ScreenLayout scrollable contentStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.brand}>ParentKey Child</Text>
-          <Text style={styles.title}>Link this device</Text>
-          <Text style={styles.subtitle}>
-            Scan the QR code from your parent&apos;s phone to connect this
-            device. No email or password needed.
-          </Text>
+      <ScreenLayout
+        safeAreaEdges={['top', 'left', 'right']}
+        contentStyle={styles.permissionLayout}>
+        <View style={styles.permissionContent}>
+          <View style={styles.header}>
+            <Text style={styles.brand}>ParentKey Child</Text>
+            <Text style={styles.title}>Link this device</Text>
+            <Text style={styles.subtitle}>
+              Scan the QR code from your parent&apos;s phone to connect this
+              device. No email or password needed.
+            </Text>
+          </View>
+
+          <InfoTipCard message="Camera access is required to scan your parent's QR code." />
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
 
-        <InfoTipCard message="Camera access is required to scan your parent's QR code." />
-
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        <AuthButton
-          loading={claiming}
-          onPress={() => void requestPermission()}
-          title="Allow camera access"
-        />
+        <View style={styles.permissionFooter}>
+          <AuthButton
+            loading={claiming}
+            onPress={() => void requestPermission()}
+            title="Allow camera access"
+          />
+        </View>
       </ScreenLayout>
     );
   }
@@ -113,8 +122,19 @@ export function ChildPairingScreen() {
 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    content: {
+    permissionLayout: {
+      flex: 1,
+    },
+    permissionContent: {
+      flex: 1,
       gap: spacing.xl,
+      paddingBottom: 160,
+    },
+    permissionFooter: {
+      bottom: 100,
+      left: 0,
+      position: 'absolute',
+      right: 0,
     },
     centered: {
       alignItems: 'center',

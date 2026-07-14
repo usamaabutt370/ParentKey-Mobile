@@ -126,7 +126,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     setPasswordRecoveryPending(false);
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch {
+      // Account may already be deleted by the parent; clear local session anyway.
+    }
+    setSession(null);
   }, []);
 
   const clearPasswordRecovery = useCallback(() => {

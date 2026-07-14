@@ -2,9 +2,26 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { ChildProfileDraft } from '../types/child';
 
 export type AuthStackParamList = {
+  Welcome: undefined;
+  AddChildIntro: undefined;
+  InstallChildApp: undefined;
+  LinkChildQrAuth: undefined;
   Login: undefined;
   Signup: undefined;
-  ForgotPassword: undefined;
+  ForgotPassword:
+    | {
+        returnTo?: 'LinkChildQrAuth';
+      }
+    | undefined;
+};
+
+export type ParentOnboardingParamList = {
+  AddChildIntro: undefined;
+  InstallChildApp: undefined;
+  ShowPairingQr: undefined;
+  PairingSuccess: {
+    childId: string;
+  };
 };
 
 export type ChildrenStackParamList = {
@@ -45,7 +62,15 @@ export type ParentTabParamList = {
   Settings: undefined;
 };
 
+export type ChildStackParamList = {
+  ChildConsent: undefined;
+  ChildProfileSetup: undefined;
+  ChildPermissions: undefined;
+  ChildDeviceSync: undefined;
+  ChildHome: undefined;
+};
+
 export type AppStackParamList = {
   ParentTabs: undefined;
-  ChildHome: undefined;
+  ChildFlow: undefined;
 };
