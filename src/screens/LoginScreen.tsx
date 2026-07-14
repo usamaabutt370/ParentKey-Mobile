@@ -76,8 +76,8 @@ export function LoginScreen({ navigation }: Props) {
         <Spacer.Column numberOfSpaces={14} />
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>
-          Parents sign in with their account. Children use the email and
-          password their parent created in the Children tab.
+          Sign in to manage screen time, app limits, and your linked child
+          devices.
         </Text>
       </View>
 

@@ -34,6 +34,7 @@ export function AuthButton({
   if (variant === 'secondary') {
     return (
       <Pressable
+        {...props}
         accessibilityRole="button"
         disabled={isDisabled}
         style={({ pressed }) => [
@@ -42,8 +43,7 @@ export function AuthButton({
           pressed && !isDisabled && styles.pressed,
           isDisabled && styles.disabled,
           style as StyleProp<ViewStyle>,
-        ]}
-        {...props}>
+        ]}>
         {loading ? (
           <ActivityIndicator color={colors.brand.tealLight} />
         ) : (
@@ -55,6 +55,7 @@ export function AuthButton({
 
   return (
     <Pressable
+      {...props}
       accessibilityRole="button"
       disabled={isDisabled}
       style={({ pressed }) => [
@@ -62,8 +63,7 @@ export function AuthButton({
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
         style as StyleProp<ViewStyle>,
-      ]}
-      {...props}>
+      ]}>
       <LinearGradient
         colors={[colors.button.gradientStart, colors.button.gradientEnd]}
         end={{ x: 1, y: 0.5 }}

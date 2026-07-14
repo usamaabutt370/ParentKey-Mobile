@@ -108,8 +108,8 @@ export function SignupScreen({ navigation }: Props) {
         <Spacer.Column numberOfSpaces={14} />
         <Text style={styles.title}>Create parent account</Text>
         <Text style={styles.subtitle}>
-          Sign up to manage your family. Child accounts are created from the
-          Children tab after you sign in.
+          Sign up to manage your family. You can link a child’s phone anytime
+          from Children with a QR code.
         </Text>
       </View>
 

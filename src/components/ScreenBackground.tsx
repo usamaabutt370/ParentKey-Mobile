@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { StyleSheet, View, type ViewProps } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import type { ColorPalette } from '../theme/colors';
@@ -13,13 +13,13 @@ export function ScreenBackground({
   ...props
 }: ScreenBackgroundProps) {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={[styles.container, style]} {...props}>
-      <View style={styles.glowPrimary} />
-      <View style={styles.glowSecondary} />
-      <View style={styles.glowTertiary} />
+      <View pointerEvents="none" style={styles.glowPrimary} />
+      <View pointerEvents="none" style={styles.glowSecondary} />
+      <View pointerEvents="none" style={styles.glowTertiary} />
       {children}
     </View>
   );

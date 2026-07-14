@@ -19,10 +19,11 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
-export function ForgotPasswordScreen({ navigation }: Props) {
+export function ForgotPasswordScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { requestPasswordReset } = useAuth();
+  const returnTo = route.params?.returnTo;
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState<string | undefined>();
@@ -30,6 +31,19 @@ export function ForgotPasswordScreen({ navigation }: Props) {
   const [emailSent, setEmailSent] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  const goToLogin = () => {
+    if (returnTo === 'LinkChildQrAuth') {
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+        return;
+      }
+      navigation.navigate('LinkChildQrAuth');
+      return;
+    }
+
+    navigation.navigate('Login');
+  };
 
   const startResendCooldown = () => {
     setResendCooldown(RESEND_COOLDOWN_SECONDS);
@@ -135,7 +149,9 @@ export function ForgotPasswordScreen({ navigation }: Props) {
           <AuthButton
             disabled={resendCooldown > 0 || loading}
             loading={loading}
-            onPress={() => void handleResend()}
+            onPress={() => {
+              handleResend().catch(() => undefined);
+            }}
             title={
               resendCooldown > 0
                 ? `Resend in ${resendCooldown}s`
@@ -144,7 +160,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
             variant="secondary"
           />
           <AuthButton
-            onPress={() => navigation.navigate('Login')}
+            onPress={goToLogin}
             title="Back to log in"
           />
         </View>
@@ -168,7 +184,9 @@ export function ForgotPasswordScreen({ navigation }: Props) {
           {formError ? <Text style={styles.formError}>{formError}</Text> : null}
           <AuthButton
             loading={loading}
-            onPress={() => void handleSubmit()}
+            onPress={() => {
+              handleSubmit().catch(() => undefined);
+            }}
             title="Send reset link"
           />
         </View>
@@ -177,9 +195,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
       <View style={styles.footer}>
         <Text style={styles.footerText}>
           Remember your password?{' '}
-          <Text
-            style={styles.footerLink}
-            onPress={() => navigation.navigate('Login')}>
+          <Text style={styles.footerLink} onPress={goToLogin}>
             Log in
           </Text>
         </Text>

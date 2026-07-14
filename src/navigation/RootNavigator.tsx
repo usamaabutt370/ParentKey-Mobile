@@ -15,7 +15,7 @@ import { WrongAppScreen } from '../screens/WrongAppScreen';
 import type { ColorPalette } from '../theme/colors';
 import { AuthNavigator } from './AuthNavigator';
 import { ChildStackNavigator } from './ChildStackNavigator';
-import { ParentTabNavigator } from './ParentTabNavigator';
+import { ParentSetupGate } from './ParentSetupGate';
 import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import type { AppStackParamList } from './types';
 
@@ -28,20 +28,18 @@ function AppStackNavigator() {
     return <WrongAppScreen accountRole={role} appVariant={APP_VARIANT} />;
   }
 
-  const initialRouteName = role === 'child' ? 'ChildFlow' : 'ParentTabs';
-
-  return (
-    <AppStack.Navigator
-      initialRouteName={initialRouteName}
-      screenOptions={{ headerShown: false }}>
-      {APP_VARIANT !== 'child' ? (
-        <AppStack.Screen component={ParentTabNavigator} name="ParentTabs" />
-      ) : null}
-      {APP_VARIANT !== 'parent' ? (
+  if (role === 'child' || APP_VARIANT === 'child') {
+    return (
+      <AppStack.Navigator
+        initialRouteName="ChildFlow"
+        screenOptions={{ headerShown: false }}>
         <AppStack.Screen component={ChildStackNavigator} name="ChildFlow" />
-      ) : null}
-    </AppStack.Navigator>
-  );
+      </AppStack.Navigator>
+    );
+  }
+
+  // Parent: first-run Kids360-style onboarding, then dashboard tabs.
+  return <ParentSetupGate />;
 }
 
 function buildNavigationTheme(colors: ColorPalette, isDark: boolean) {
