@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import {
   Dimensions,
   Image,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -14,8 +13,7 @@ import { WelcomeSlideOverlay } from '../../../components/parent/WelcomeSlideOver
 import { PARENT_WELCOME_SLIDES } from '../../../constants/parentOnboarding';
 import { useTheme } from '../../../context/ThemeContext';
 import {
-  clearPendingLinkChild,
-  clearPreAuthSetupRoute,
+  markParentWelcomeVisited,
   setPreAuthSetupRoute,
 } from '../../../lib/pendingParentAction';
 import type { AuthStackParamList } from '../../../navigation/types';
@@ -40,9 +38,14 @@ export function ParentWelcomeScreen({ navigation }: Props) {
 
   const handleNext = () => {
     if (isLast) {
-      void setPreAuthSetupRoute('AddChildIntro').then(() => {
-        navigation.navigate('AddChildIntro');
-      });
+      Promise.all([
+        markParentWelcomeVisited(),
+        setPreAuthSetupRoute('AddChildIntro'),
+      ])
+        .then(() => {
+          navigation.navigate('AddChildIntro');
+        })
+        .catch(() => undefined);
       return;
     }
 
@@ -69,20 +72,6 @@ export function ParentWelcomeScreen({ navigation }: Props) {
             );
           })}
         </View>
-
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            void Promise.all([
-              clearPendingLinkChild(),
-              clearPreAuthSetupRoute(),
-            ]).then(() => {
-              navigation.navigate('Login');
-            });
-          }}
-          style={styles.signInHit}>
-          <Text style={styles.signIn}>Sign in</Text>
-        </Pressable>
 
         <View style={styles.main}>
           <View style={styles.visualWrap}>
@@ -142,6 +131,7 @@ function createStyles(colors: ColorPalette) {
       flexDirection: 'row',
       gap: 6,
       marginBottom: spacing.sm,
+      marginTop: spacing.lg,
     },
     progressTrack: {
       backgroundColor: colors.border.default,
@@ -154,16 +144,6 @@ function createStyles(colors: ColorPalette) {
       backgroundColor: colors.brand.tealLight,
       borderRadius: 999,
       height: '100%',
-    },
-    signInHit: {
-      alignSelf: 'flex-end',
-      marginBottom: spacing.md,
-      paddingVertical: spacing.xs,
-    },
-    signIn: {
-      color: colors.text.brand,
-      fontSize: 15,
-      fontWeight: '600',
     },
     main: {
       flex: 1,
