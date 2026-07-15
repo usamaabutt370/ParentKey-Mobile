@@ -9,12 +9,14 @@ import { buildPairingQrValue } from '../../../constants/pairing';
 import { useTheme } from '../../../context/ThemeContext';
 import { useExpiryCountdown } from '../../../hooks/useExpiryCountdown';
 import {
+  clearActivePairingSession,
   createPairingSession,
+  getActivePairingSession,
+  saveActivePairingSession,
   subscribeToPairingSession,
   type PairingSession,
 } from '../../../lib/pairing';
 import { supabase } from '../../../lib/supabase';
-import { useParentSetup } from '../../../navigation/ParentSetupGate';
 import type { ParentOnboardingParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { radii, spacing, typography } from '../../../theme';
@@ -25,10 +27,8 @@ type Props = NativeStackScreenProps<ParentOnboardingParamList, 'ShowPairingQr'>;
 export function ParentShowPairingQrScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { finishOnboarding } = useParentSetup();
   const [session, setSession] = useState<PairingSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const [skipping, setSkipping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState(
     'Waiting for your child to scan this code…',
@@ -42,6 +42,17 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
       setLoading(true);
       setError(null);
 
+      const cached = await getActivePairingSession();
+      if (cancelled) {
+        return;
+      }
+
+      if (cached) {
+        setSession(cached);
+        setLoading(false);
+        return;
+      }
+
       const result = await createPairingSession();
       if (cancelled) {
         return;
@@ -51,6 +62,11 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
 
       if (!result.ok) {
         setError(result.message);
+        return;
+      }
+
+      await saveActivePairingSession(result.session);
+      if (cancelled) {
         return;
       }
 
@@ -71,6 +87,7 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
 
     const handleClaimed = (childId: string) => {
       setStatusMessage('Device linked!');
+      void clearActivePairingSession();
       navigation.replace('PairingSuccess', { childId });
     };
 
@@ -113,20 +130,9 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
       return;
     }
 
+    await saveActivePairingSession(result.session);
     setSession(result.session);
     setStatusMessage('Waiting for your child to scan this code…');
-  };
-
-  const handleSkip = async () => {
-    if (skipping) {
-      return;
-    }
-    setSkipping(true);
-    try {
-      await finishOnboarding();
-    } finally {
-      setSkipping(false);
-    }
   };
 
   return (
@@ -148,12 +154,6 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
           <View style={styles.centered}>
             <Text style={styles.errorText}>{error}</Text>
             <AuthButton onPress={() => void handleRefresh()} title="Try again" />
-            <AuthButton
-              loading={skipping}
-              onPress={() => void handleSkip()}
-              title="Skip for now"
-              variant="secondary"
-            />
           </View>
         ) : session ? (
           <>
@@ -174,12 +174,6 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
             <AuthButton
               onPress={() => void handleRefresh()}
               title="Generate new code"
-              variant="secondary"
-            />
-            <AuthButton
-              loading={skipping}
-              onPress={() => void handleSkip()}
-              title="Skip for now"
               variant="secondary"
             />
           </>

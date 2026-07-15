@@ -1,6 +1,9 @@
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAndroidDeviceId } from './androidAppBlocking';
 import { supabase } from './supabase';
+
+const ACTIVE_PAIRING_SESSION_KEY = 'parent_active_pairing_session_v1';
 
 export type PairingSession = {
   sessionId: string;
@@ -92,6 +95,55 @@ export async function createPairingSession(): Promise<
       expiresAt: row.expires_at,
     },
   };
+}
+
+function isPairingSession(value: unknown): value is PairingSession {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const row = value as Record<string, unknown>;
+  return (
+    typeof row.sessionId === 'string' &&
+    typeof row.token === 'string' &&
+    typeof row.expiresAt === 'string'
+  );
+}
+
+export async function saveActivePairingSession(
+  session: PairingSession,
+): Promise<void> {
+  await AsyncStorage.setItem(ACTIVE_PAIRING_SESSION_KEY, JSON.stringify(session));
+}
+
+export async function clearActivePairingSession(): Promise<void> {
+  await AsyncStorage.removeItem(ACTIVE_PAIRING_SESSION_KEY);
+}
+
+/** Returns a locally cached pairing QR session if it is still valid. */
+export async function getActivePairingSession(): Promise<PairingSession | null> {
+  const raw = await AsyncStorage.getItem(ACTIVE_PAIRING_SESSION_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isPairingSession(parsed)) {
+      await clearActivePairingSession();
+      return null;
+    }
+
+    if (new Date(parsed.expiresAt).getTime() <= Date.now()) {
+      await clearActivePairingSession();
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    await clearActivePairingSession();
+    return null;
+  }
 }
 
 export async function validatePairingToken(
