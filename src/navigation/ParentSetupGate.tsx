@@ -15,6 +15,7 @@ import {
   clearPreAuthSetupRoute,
   hasPendingLinkChild,
 } from '../lib/pendingParentAction';
+import { clearActivePairingSession } from '../lib/pairing';
 import { markParentOnboardingComplete } from '../lib/parentOnboarding';
 import { ParentOnboardingNavigator } from '../navigation/ParentOnboardingNavigator';
 import { ParentTabNavigator } from '../navigation/ParentTabNavigator';
@@ -79,6 +80,7 @@ export function ParentSetupGate() {
     }
 
     await clearPendingLinkChild();
+    await clearActivePairingSession();
     await clearPreAuthSetupRoute();
     await markParentOnboardingComplete(parentId);
     setNeedsLinkChildFlow(false);

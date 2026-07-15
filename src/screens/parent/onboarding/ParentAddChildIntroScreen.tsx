@@ -29,7 +29,6 @@ export function ParentAddChildIntroScreen({ navigation }: Props) {
   const stackNavigation = navigation as unknown as StackNavigation;
   const routeNames = stackNavigation.getState().routeNames;
   const canOpenQrAuth = routeNames.includes('LinkChildQrAuth');
-  const canShowQr = routeNames.includes('ShowPairingQr');
 
   useEffect(() => {
     if (!canOpenQrAuth) {
@@ -38,21 +37,6 @@ export function ParentAddChildIntroScreen({ navigation }: Props) {
 
     setPreAuthSetupRoute('AddChildIntro').catch(() => undefined);
   }, [canOpenQrAuth]);
-
-  const handleSkip = () => {
-    if (canOpenQrAuth) {
-      setPreAuthSetupRoute('LinkChildQrAuth')
-        .then(() => {
-          stackNavigation.navigate('LinkChildQrAuth');
-        })
-        .catch(() => undefined);
-      return;
-    }
-
-    if (canShowQr) {
-      stackNavigation.navigate('ShowPairingQr');
-    }
-  };
 
   const handleContinue = () => {
     if (canOpenQrAuth) {
@@ -97,11 +81,6 @@ export function ParentAddChildIntroScreen({ navigation }: Props) {
 
         <View style={styles.footer}>
           <AuthButton onPress={handleContinue} title="Continue" />
-          <AuthButton
-            onPress={handleSkip}
-            title="Skip for now"
-            variant="secondary"
-          />
         </View>
       </View>
     </ScreenLayout>
@@ -118,11 +97,10 @@ function createStyles(colors: ColorPalette) {
     },
     setupContent: {
       flex: 1,
-      paddingBottom: 180,
+      paddingBottom: 140,
     },
     footer: {
-      bottom: 50,
-      gap: spacing.md,
+      bottom: 0,
       left: 0,
       position: 'absolute',
       right: 0,

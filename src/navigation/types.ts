@@ -2,6 +2,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { ChildProfileDraft } from '../types/child';
 
 export type AuthStackParamList = {
+  DeviceRole: undefined;
   Welcome: undefined;
   AddChildIntro: undefined;
   InstallChildApp: undefined;

@@ -11,7 +11,7 @@ const Stack = createNativeStackNavigator<ParentOnboardingParamList>();
 export function ParentOnboardingNavigator() {
   return (
     <Stack.Navigator
-      initialRouteName="ShowPairingQr"
+      initialRouteName="AddChildIntro"
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',

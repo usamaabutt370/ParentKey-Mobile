@@ -18,6 +18,13 @@ import {
   type SignUpParams,
   type SignUpResult,
 } from '../lib/auth';
+import {
+  clearDeviceRoleChoice,
+  clearParentWelcomeVisited,
+  clearPendingLinkChild,
+  clearPreAuthSetupRoute,
+} from '../lib/pendingParentAction';
+import { clearActivePairingSession } from '../lib/pairing';
 import { supabase } from '../lib/supabase';
 import {
   getRoleFromSession,
@@ -131,6 +138,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Account may already be deleted by the parent; clear local session anyway.
     }
+    await Promise.all([
+      clearPendingLinkChild(),
+      clearActivePairingSession(),
+      clearPreAuthSetupRoute(),
+      clearDeviceRoleChoice(),
+      clearParentWelcomeVisited(),
+    ]);
     setSession(null);
   }, []);
 

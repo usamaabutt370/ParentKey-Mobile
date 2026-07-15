@@ -7,13 +7,16 @@ import { InfoTipCard } from '../../../components/parent';
 import { PARENT_ONBOARDING_TOTAL_STEPS } from '../../../constants/parentOnboarding';
 import { buildPairingQrValue } from '../../../constants/pairing';
 import { useTheme } from '../../../context/ThemeContext';
+import { useExpiryCountdown } from '../../../hooks/useExpiryCountdown';
 import {
+  clearActivePairingSession,
   createPairingSession,
+  getActivePairingSession,
+  saveActivePairingSession,
   subscribeToPairingSession,
   type PairingSession,
 } from '../../../lib/pairing';
 import { supabase } from '../../../lib/supabase';
-import { useParentSetup } from '../../../navigation/ParentSetupGate';
 import type { ParentOnboardingParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { radii, spacing, typography } from '../../../theme';
@@ -21,27 +24,16 @@ import { ParentOnboardingStepLayout } from './ParentOnboardingStepLayout';
 
 type Props = NativeStackScreenProps<ParentOnboardingParamList, 'ShowPairingQr'>;
 
-function formatExpiry(expiresAt: string): string {
-  const expiresDate = new Date(expiresAt);
-  const minutesLeft = Math.max(
-    1,
-    Math.ceil((expiresDate.getTime() - Date.now()) / 60_000),
-  );
-
-  return `Expires in ${minutesLeft} min`;
-}
-
 export function ParentShowPairingQrScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { finishOnboarding } = useParentSetup();
   const [session, setSession] = useState<PairingSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const [skipping, setSkipping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState(
     'Waiting for your child to scan this code…',
   );
+  const expiryLabel = useExpiryCountdown(session?.expiresAt);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +41,17 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
     const startSession = async () => {
       setLoading(true);
       setError(null);
+
+      const cached = await getActivePairingSession();
+      if (cancelled) {
+        return;
+      }
+
+      if (cached) {
+        setSession(cached);
+        setLoading(false);
+        return;
+      }
 
       const result = await createPairingSession();
       if (cancelled) {
@@ -59,6 +62,11 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
 
       if (!result.ok) {
         setError(result.message);
+        return;
+      }
+
+      await saveActivePairingSession(result.session);
+      if (cancelled) {
         return;
       }
 
@@ -79,6 +87,7 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
 
     const handleClaimed = (childId: string) => {
       setStatusMessage('Device linked!');
+      void clearActivePairingSession();
       navigation.replace('PairingSuccess', { childId });
     };
 
@@ -121,20 +130,9 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
       return;
     }
 
+    await saveActivePairingSession(result.session);
     setSession(result.session);
     setStatusMessage('Waiting for your child to scan this code…');
-  };
-
-  const handleSkip = async () => {
-    if (skipping) {
-      return;
-    }
-    setSkipping(true);
-    try {
-      await finishOnboarding();
-    } finally {
-      setSkipping(false);
-    }
   };
 
   return (
@@ -156,12 +154,6 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
           <View style={styles.centered}>
             <Text style={styles.errorText}>{error}</Text>
             <AuthButton onPress={() => void handleRefresh()} title="Try again" />
-            <AuthButton
-              loading={skipping}
-              onPress={() => void handleSkip()}
-              title="Skip for now"
-              variant="secondary"
-            />
           </View>
         ) : session ? (
           <>
@@ -175,19 +167,13 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
             </View>
 
             <Text style={styles.status}>{statusMessage}</Text>
-            <Text style={styles.expiry}>{formatExpiry(session.expiresAt)}</Text>
+            <Text style={styles.expiry}>{expiryLabel}</Text>
 
             <InfoTipCard message="After scanning, your child will complete consent, profile, and permissions on their phone." />
 
             <AuthButton
               onPress={() => void handleRefresh()}
               title="Generate new code"
-              variant="secondary"
-            />
-            <AuthButton
-              loading={skipping}
-              onPress={() => void handleSkip()}
-              title="Skip for now"
               variant="secondary"
             />
           </>

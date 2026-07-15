@@ -1,18 +1,24 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ScreenLayout } from '../components';
 import { useTheme } from '../context/ThemeContext';
 import { APP_VARIANT } from '../lib/appInfo';
-import { getPreAuthSetupRoute } from '../lib/pendingParentAction';
+import {
+  clearPendingLinkChild,
+  clearPreAuthSetupRoute,
+  getPreAuthSetupRoute,
+  isParentWelcomeVisited,
+  setPreAuthSetupRoute,
+} from '../lib/pendingParentAction';
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { SignupScreen } from '../screens/SignupScreen';
+import { DeviceRoleScreen } from '../screens/parent/onboarding/DeviceRoleScreen';
 import { LinkChildQrAuthScreen } from '../screens/parent/onboarding/LinkChildQrAuthScreen';
 import { ParentAddChildIntroScreen } from '../screens/parent/onboarding/ParentAddChildIntroScreen';
 import { ParentInstallChildAppScreen } from '../screens/parent/onboarding/ParentInstallChildAppScreen';
 import { ParentWelcomeScreen } from '../screens/parent/onboarding/ParentWelcomeScreen';
-import type { ColorPalette } from '../theme/colors';
 import type { AuthStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -20,10 +26,9 @@ const Stack = createNativeStackNavigator<AuthStackParamList>();
 export function AuthNavigator() {
   const showSignup = APP_VARIANT !== 'child';
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
   const [ready, setReady] = useState(!showSignup);
   const [initialRouteName, setInitialRouteName] =
-    useState<keyof AuthStackParamList>(showSignup ? 'Welcome' : 'Login');
+    useState<keyof AuthStackParamList>(showSignup ? 'DeviceRole' : 'Login');
 
   useEffect(() => {
     if (!showSignup) {
@@ -32,17 +37,52 @@ export function AuthNavigator() {
 
     let cancelled = false;
 
-    void (async () => {
-      const savedRoute = await getPreAuthSetupRoute();
+    const resolveInitialRoute = async () => {
+      const welcomeVisited = await isParentWelcomeVisited();
       if (cancelled) {
         return;
       }
 
-      if (savedRoute) {
-        setInitialRouteName(savedRoute);
+      // Until the welcome onboarding is completed, always reopen on role pick.
+      if (!welcomeVisited) {
+        await clearPreAuthSetupRoute();
+        if (cancelled) {
+          return;
+        }
+        setInitialRouteName('DeviceRole');
+        setReady(true);
+        return;
       }
+
+      const savedSetupRoute = await getPreAuthSetupRoute();
+      if (cancelled) {
+        return;
+      }
+
+      // Informative setup (intro → install → QR auth) always restarts at step 1
+      // if the app was killed before login/signup.
+      if (
+        savedSetupRoute === 'AddChildIntro' ||
+        savedSetupRoute === 'InstallChildApp' ||
+        savedSetupRoute === 'LinkChildQrAuth'
+      ) {
+        await Promise.all([
+          setPreAuthSetupRoute('AddChildIntro'),
+          clearPendingLinkChild(),
+        ]);
+        if (cancelled) {
+          return;
+        }
+        setInitialRouteName('AddChildIntro');
+        setReady(true);
+        return;
+      }
+
+      setInitialRouteName(savedSetupRoute ?? 'Welcome');
       setReady(true);
-    })();
+    };
+
+    resolveInitialRoute().catch(() => undefined);
 
     return () => {
       cancelled = true;
@@ -65,6 +105,9 @@ export function AuthNavigator() {
         headerShown: false,
         animation: 'slide_from_right',
       }}>
+      {showSignup ? (
+        <Stack.Screen component={DeviceRoleScreen} name="DeviceRole" />
+      ) : null}
       {showSignup ? (
         <Stack.Screen component={ParentWelcomeScreen} name="Welcome" />
       ) : null}
@@ -95,11 +138,10 @@ export function AuthNavigator() {
   );
 }
 
-function createStyles(colors: ColorPalette) {
-  return StyleSheet.create({
-    loading: {
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-  });
-}
+const styles = StyleSheet.create({
+  loading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
+
