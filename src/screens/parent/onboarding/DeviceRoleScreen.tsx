@@ -10,8 +10,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
-import { ScreenBackground } from '../../../components';
+import { AuthButton, ScreenBackground } from '../../../components';
 import { useTheme } from '../../../context/ThemeContext';
 import type { AuthStackParamList } from '../../../navigation/types';
 import {
@@ -172,7 +171,7 @@ export function DeviceRoleScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.footer}>
-          <Pressable
+          {/* <Pressable
             accessibilityRole="button"
             disabled={continuing}
             onPress={() => {
@@ -190,7 +189,8 @@ export function DeviceRoleScreen({ navigation }: Props) {
               style={styles.continueButton}>
               <Text style={styles.continueLabel}>Continue</Text>
             </LinearGradient>
-          </Pressable>
+          </Pressable> */}
+          <AuthButton onPress={handleContinue} title="Continue" />
         </View>
       </SafeAreaView>
     </ScreenBackground>
@@ -291,7 +291,7 @@ function createStyles(colors: ColorPalette) {
       gap: spacing.md,
     },
     footer: {
-      bottom: 100,
+      bottom: 50,
       left: spacing.lg,
       position: 'absolute',
       right: spacing.lg,

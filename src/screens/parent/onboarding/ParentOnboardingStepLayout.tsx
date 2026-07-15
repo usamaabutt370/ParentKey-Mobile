@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Feather from 'react-native-vector-icons/Feather';
 import { useTheme } from '../../../context/ThemeContext';
 import type { ColorPalette } from '../../../theme/colors';
 import { spacing, typography } from '../../../theme';
@@ -8,6 +9,7 @@ type Props = {
   children: React.ReactNode;
   currentStep: number;
   icon: string;
+  onBack?: () => void;
   subtitle: string;
   title: string;
   totalSteps: number;
@@ -17,6 +19,7 @@ export function ParentOnboardingStepLayout({
   children,
   currentStep,
   icon,
+  onBack,
   subtitle,
   title,
   totalSteps,
@@ -26,6 +29,17 @@ export function ParentOnboardingStepLayout({
 
   return (
     <View style={styles.container}>
+      {onBack ? (
+        <Pressable
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={onBack}
+          style={styles.backButton}>
+          <Feather color={colors.text.primary} name="chevron-left" size={24} />
+        </Pressable>
+      ) : null}
+
       <View style={styles.progressRow}>
         {Array.from({ length: totalSteps }, (_, index) => (
           <View
@@ -57,6 +71,11 @@ function createStyles(colors: ColorPalette) {
       gap: spacing.md,
       justifyContent: 'flex-start',
       paddingTop: spacing.sm,
+    },
+    backButton: {
+      alignSelf: 'flex-start',
+      marginBottom: -spacing.xs,
+      marginLeft: -spacing.xs,
     },
     progressRow: {
       flexDirection: 'row',

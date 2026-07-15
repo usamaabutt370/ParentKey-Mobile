@@ -46,6 +46,10 @@ export function ParentInstallChildAppScreen({ navigation }: Props) {
     setPreAuthSetupRoute('InstallChildApp').catch(() => undefined);
   }, [canOpenQrAuth]);
 
+  const handleBack = () => {
+    stackNavigation.navigate('AddChildIntro');
+  };
+
   const handleLinkChild = () => {
     if (canShowQr) {
       stackNavigation.navigate('ShowPairingQr');
@@ -68,7 +72,8 @@ export function ParentInstallChildAppScreen({ navigation }: Props) {
           <ParentOnboardingStepLayout
             currentStep={2}
             icon="⬇️"
-            subtitle="Install the child app before linking. Next you’ll sign in so we can show a QR code."
+            onBack={handleBack}
+            subtitle="Install the child app before linking. Next you’ll generate a QR code to connect their phone."
             title="Install ParentKey Child"
             totalSteps={PARENT_ONBOARDING_TOTAL_STEPS}>
             <View style={styles.list}>
@@ -107,7 +112,7 @@ function createStyles(colors: ColorPalette) {
       paddingBottom: 160,
     },
     footer: {
-      bottom: 50,
+      bottom: 0,
       left: 0,
       position: 'absolute',
       right: 0,

@@ -6,6 +6,7 @@ import { AuthButton, ScreenLayout } from '../../components';
 import { InfoTipCard, ScreenHeader } from '../../components/parent';
 import { buildPairingQrValue } from '../../constants/pairing';
 import { useTheme } from '../../context/ThemeContext';
+import { useExpiryCountdown } from '../../hooks/useExpiryCountdown';
 import {
   createPairingSession,
   subscribeToPairingSession,
@@ -18,16 +19,6 @@ import { radii, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<ChildrenStackParamList, 'PairChildQr'>;
 
-function formatExpiry(expiresAt: string): string {
-  const expiresDate = new Date(expiresAt);
-  const minutesLeft = Math.max(
-    1,
-    Math.ceil((expiresDate.getTime() - Date.now()) / 60_000),
-  );
-
-  return `Expires in ${minutesLeft} min`;
-}
-
 export function PairChildQrScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -37,6 +28,7 @@ export function PairChildQrScreen({ navigation }: Props) {
   const [statusMessage, setStatusMessage] = useState(
     'Waiting for your child to scan this code…',
   );
+  const expiryLabel = useExpiryCountdown(session?.expiresAt);
 
   useEffect(() => {
     let cancelled = false;
@@ -152,7 +144,7 @@ export function PairChildQrScreen({ navigation }: Props) {
           </View>
 
           <Text style={styles.status}>{statusMessage}</Text>
-          <Text style={styles.expiry}>{formatExpiry(session.expiresAt)}</Text>
+          <Text style={styles.expiry}>{expiryLabel}</Text>
 
           <InfoTipCard message="On the child device, open ParentKey Child. The app will ask for camera access, then scan this QR code. No email or password is needed." />
 

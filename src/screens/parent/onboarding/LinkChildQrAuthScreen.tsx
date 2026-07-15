@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
   KeyboardAvoidingView,
   Modal,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -23,7 +25,10 @@ import {
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { isValidEmail } from '../../../lib/auth';
-import { setPendingLinkChild, setPreAuthSetupRoute } from '../../../lib/pendingParentAction';
+import {
+  setPendingLinkChild,
+  setPreAuthSetupRoute,
+} from '../../../lib/pendingParentAction';
 import type { AuthStackParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { radii, spacing, typography } from '../../../theme';
@@ -46,13 +51,16 @@ type SignupErrors = {
 };
 
 const SHEET_HEIGHT = Dimensions.get('window').height * 0.85;
+const DISMISS_DISTANCE = 110;
+const DISMISS_VELOCITY = 1.15;
 
 export function LinkChildQrAuthScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { signIn, signUp } = useAuth();
 
-  const [authVisible, setAuthVisible] = useState(true);
+  const [authVisible, setAuthVisible] = useState(false);
+  const [awaitingSession, setAwaitingSession] = useState(false);
   const [mode, setMode] = useState<AuthMode>('login');
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -65,11 +73,92 @@ export function LinkChildQrAuthScreen({ navigation }: Props) {
   const [lastName, setLastName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [signupErrors, setSignupErrors] = useState<SignupErrors>({});
+  const sheetTranslateY = useRef(new Animated.Value(0)).current;
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
 
   useEffect(() => {
     setPendingLinkChild().catch(() => undefined);
     setPreAuthSetupRoute('LinkChildQrAuth').catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (!authVisible) {
+      return;
+    }
+
+    sheetTranslateY.setValue(SHEET_HEIGHT);
+    Animated.timing(sheetTranslateY, {
+      toValue: 0,
+      duration: 280,
+      useNativeDriver: true,
+    }).start();
+  }, [authVisible, sheetTranslateY]);
+
+  const finishCloseSheet = useCallback(() => {
+    setAuthVisible(false);
+    sheetTranslateY.setValue(0);
+  }, [sheetTranslateY]);
+
+  const closeAuthSheet = useCallback(() => {
+    if (loadingRef.current) {
+      return;
+    }
+
+    Animated.timing(sheetTranslateY, {
+      toValue: SHEET_HEIGHT,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        finishCloseSheet();
+      }
+    });
+  }, [finishCloseSheet, sheetTranslateY]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => !loadingRef.current,
+        onMoveShouldSetPanResponder: (_event, gesture) =>
+          !loadingRef.current && gesture.dy > 3,
+        onPanResponderMove: (_event, gesture) => {
+          if (gesture.dy > 0) {
+            sheetTranslateY.setValue(gesture.dy);
+          }
+        },
+        onPanResponderRelease: (_event, gesture) => {
+          if (loadingRef.current) {
+            return;
+          }
+
+          if (gesture.dy > DISMISS_DISTANCE || gesture.vy > DISMISS_VELOCITY) {
+            Animated.timing(sheetTranslateY, {
+              toValue: SHEET_HEIGHT,
+              duration: 200,
+              useNativeDriver: true,
+            }).start(({ finished }) => {
+              if (finished) {
+                finishCloseSheet();
+              }
+            });
+            return;
+          }
+
+          Animated.spring(sheetTranslateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 4,
+          }).start();
+        },
+      }),
+    [finishCloseSheet, sheetTranslateY],
+  );
+
+  const openAuthSheet = () => {
+    setFormError(null);
+    setAuthVisible(true);
+  };
 
   const switchMode = (next: AuthMode) => {
     setMode(next);
@@ -116,9 +205,8 @@ export function LinkChildQrAuthScreen({ navigation }: Props) {
   };
 
   const handleAuthSuccess = () => {
-    // Reveal the QR stage under the sheet; RootNavigator remounts into the
-    // real pairing QR once the session is active.
     setAuthVisible(false);
+    setAwaitingSession(true);
   };
 
   const handleLogin = async () => {
@@ -167,25 +255,32 @@ export function LinkChildQrAuthScreen({ navigation }: Props) {
   return (
     <ScreenBackground>
       <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
+        <Pressable
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={() => {
+            navigation.navigate('InstallChildApp');
+          }}
+          style={styles.backButton}>
+          <Feather color={colors.text.primary} name="chevron-left" size={24} />
+        </Pressable>
+
         <View style={styles.qrStage}>
           <Text style={styles.stageEyebrow}>STEP 3 OF 4</Text>
           <Text style={styles.stageTitle}>Link with QR code</Text>
           <Text style={styles.stageSubtitle}>
-            Sign in or create an account to reveal the code your child will scan.
+            {awaitingSession
+              ? 'You’re signed in. Preparing a secure code for your child’s phone…'
+              : 'A QR code appears only after you sign in as a parent, so only your family can link a device.'}
           </Text>
 
-          <View style={[styles.qrCard, !authVisible && styles.qrCardActive]}>
-            {authVisible ? (
-              <>
-                <View style={styles.lockBadge}>
-                  <Feather color={colors.brand.tealLight} name="lock" size={28} />
-                </View>
-                <Text style={styles.qrHint}>QR code locked</Text>
-                <Text style={styles.qrHintSecondary}>
-                  Complete login or sign up below
-                </Text>
-              </>
-            ) : (
+          <View
+            style={[
+              styles.qrCard,
+              awaitingSession ? styles.qrCardActive : null,
+            ]}>
+            {awaitingSession ? (
               <>
                 <ActivityIndicator
                   color={colors.brand.tealLight}
@@ -194,65 +289,77 @@ export function LinkChildQrAuthScreen({ navigation }: Props) {
                 />
                 <Text style={styles.qrHint}>Preparing your QR code…</Text>
               </>
+            ) : (
+              <>
+                <View style={styles.lockBadge}>
+                  <Feather
+                    color={colors.brand.tealLight}
+                    name="lock"
+                    size={28}
+                  />
+                </View>
+                <Text style={styles.qrHint}>No QR code yet</Text>
+                <Text style={styles.qrHintSecondary}>
+                  Sign in or create a parent account to generate a one-time
+                  linking code. Until then, nothing can be scanned from this
+                  screen.
+                </Text>
+              </>
             )}
           </View>
         </View>
+
+        {!awaitingSession ? (
+          <View style={styles.footer}>
+            <AuthButton onPress={openAuthSheet} title="Generate QR code" />
+          </View>
+        ) : null}
       </SafeAreaView>
 
       <Modal
-        animationType="slide"
-        onRequestClose={() => undefined}
+        animationType="fade"
+        onRequestClose={closeAuthSheet}
         transparent
         visible={authVisible}>
         <View style={styles.modalRoot}>
-          <Pressable style={styles.modalScrim} />
+          <Pressable
+            accessibilityLabel="Dismiss"
+            accessibilityRole="button"
+            onPress={closeAuthSheet}
+            style={styles.modalScrim}
+          />
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.sheetWrap}>
-            <View style={[styles.sheet, { height: SHEET_HEIGHT }]}>
-              <View style={styles.handle} />
+            <Animated.View
+              style={[
+                styles.sheet,
+                {
+                  height: SHEET_HEIGHT,
+                  transform: [{ translateY: sheetTranslateY }],
+                },
+              ]}>
+              <View
+                {...panResponder.panHandlers}
+                accessibilityHint="Swipe down to close"
+                accessibilityLabel="Drag handle"
+                accessibilityRole="adjustable"
+                style={styles.sheetTopBar}>
+                <View style={styles.handle} />
+              </View>
+              <View style={{marginTop:10, marginBottom:30}}>
               <Text style={styles.sheetTitle}>
                 {mode === 'login' ? 'Log in to continue' : 'Create parent account'}
               </Text>
               <Text style={styles.sheetSubtitle}>
                 After this, your linking QR code will appear on this screen.
               </Text>
-
-              <View style={styles.segment}>
-                <Pressable
-                  onPress={() => switchMode('login')}
-                  style={[
-                    styles.segmentItem,
-                    mode === 'login' && styles.segmentItemActive,
-                  ]}>
-                  <Text
-                    style={[
-                      styles.segmentLabel,
-                      mode === 'login' && styles.segmentLabelActive,
-                    ]}>
-                    Log in
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => switchMode('signup')}
-                  style={[
-                    styles.segmentItem,
-                    mode === 'signup' && styles.segmentItemActive,
-                  ]}>
-                  <Text
-                    style={[
-                      styles.segmentLabel,
-                      mode === 'signup' && styles.segmentLabelActive,
-                    ]}>
-                    Sign up
-                  </Text>
-                </Pressable>
               </View>
-
               <ScrollView
                 contentContainerStyle={styles.formScroll}
                 keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}>
+                showsVerticalScrollIndicator={false}
+                style={styles.formScrollView}>
                 {mode === 'login' ? (
                   <View>
                     <AuthTextInput
@@ -291,11 +398,12 @@ export function LinkChildQrAuthScreen({ navigation }: Props) {
                     <Spacer.Column numberOfSpaces={4} />
                     <Text
                       style={styles.forgotPasswordLink}
-                      onPress={() =>
+                      onPress={() => {
+                        setAuthVisible(false);
                         navigation.navigate('ForgotPassword', {
                           returnTo: 'LinkChildQrAuth',
-                        })
-                      }>
+                        });
+                      }}>
                       Forgot password?
                     </Text>
                   </View>
@@ -405,8 +513,29 @@ export function LinkChildQrAuthScreen({ navigation }: Props) {
                     title={mode === 'login' ? 'Log in' : 'Sign up'}
                   />
                 </View>
+                <View style={styles.modeSwitch}>
+                {mode === 'login' ? (
+                  <Text style={styles.modeSwitchText}>
+                    Don&apos;t have an account?{' '}
+                    <Text
+                      style={styles.modeSwitchLink}
+                      onPress={() => switchMode('signup')}>
+                      Sign up
+                    </Text>
+                  </Text>
+                ) : (
+                  <Text style={styles.modeSwitchText}>
+                    Already have an account?{' '}
+                    <Text
+                      style={styles.modeSwitchLink}
+                      onPress={() => switchMode('login')}>
+                      Log in
+                    </Text>
+                  </Text>
+                )}
+              </View>
               </ScrollView>
-            </View>
+            </Animated.View>
           </KeyboardAvoidingView>
         </View>
       </Modal>
@@ -420,6 +549,11 @@ function createStyles(colors: ColorPalette) {
       flex: 1,
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.md,
+    },
+    backButton: {
+      alignSelf: 'flex-start',
+      marginBottom: spacing.xs,
+      marginLeft: -spacing.xs,
     },
     qrStage: {
       alignItems: 'center',
@@ -483,8 +617,12 @@ function createStyles(colors: ColorPalette) {
     qrHintSecondary: {
       ...typography.caption,
       color: colors.text.secondary,
-      marginTop: spacing.xs,
+      marginTop: spacing.sm,
       textAlign: 'center',
+    },
+    footer: {
+      paddingBottom: spacing.md,
+      paddingTop: spacing.lg,
     },
     modalRoot: {
       flex: 1,
@@ -507,12 +645,17 @@ function createStyles(colors: ColorPalette) {
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.sm,
     },
+    sheetTopBar: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.md,
+      // Larger hit area so the handle is easy to drag.
+      paddingVertical: spacing.md,
+    },
     handle: {
-      alignSelf: 'center',
       backgroundColor: colors.border.strong,
       borderRadius: 999,
       height: 5,
-      marginBottom: spacing.md,
       width: 44,
     },
     sheetTitle: {
@@ -528,34 +671,29 @@ function createStyles(colors: ColorPalette) {
       marginTop: spacing.xs,
       opacity: 0.8,
     },
-    segment: {
-      backgroundColor: colors.input.background,
-      borderRadius: radii.md,
-      flexDirection: 'row',
-      marginBottom: spacing.md,
-      padding: 4,
-    },
-    segmentItem: {
-      alignItems: 'center',
-      borderRadius: radii.sm,
+    formScrollView: {
       flex: 1,
-      paddingVertical: 10,
-    },
-    segmentItemActive: {
-      backgroundColor: colors.background.accentStrong,
-    },
-    segmentLabel: {
-      ...typography.label,
-      color: colors.text.secondary,
-    },
-    segmentLabelActive: {
-      color: colors.text.brand,
     },
     formScroll: {
-      paddingBottom: spacing.xl,
+      flexGrow: 1,
+      paddingBottom: spacing.md,
     },
     submitWrap: {
-      marginTop: 100,
+      marginTop: spacing.xl,
+    },
+    modeSwitch: {
+      paddingBottom: spacing.sm,
+      paddingTop: spacing.md,
+      marginVertical: 50
+    },
+    modeSwitchText: {
+      ...typography.body,
+      color: colors.text.secondary,
+      textAlign: 'center',
+    },
+    modeSwitchLink: {
+      color: colors.text.brand,
+      fontWeight: '700',
     },
     forgotPasswordLink: {
       alignSelf: 'flex-end',

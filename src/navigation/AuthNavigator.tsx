@@ -5,9 +5,11 @@ import { ScreenLayout } from '../components';
 import { useTheme } from '../context/ThemeContext';
 import { APP_VARIANT } from '../lib/appInfo';
 import {
+  clearPendingLinkChild,
   clearPreAuthSetupRoute,
   getPreAuthSetupRoute,
   isParentWelcomeVisited,
+  setPreAuthSetupRoute,
 } from '../lib/pendingParentAction';
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
 import { LoginScreen } from '../screens/LoginScreen';
@@ -54,6 +56,25 @@ export function AuthNavigator() {
 
       const savedSetupRoute = await getPreAuthSetupRoute();
       if (cancelled) {
+        return;
+      }
+
+      // Informative setup (intro → install → QR auth) always restarts at step 1
+      // if the app was killed before login/signup.
+      if (
+        savedSetupRoute === 'AddChildIntro' ||
+        savedSetupRoute === 'InstallChildApp' ||
+        savedSetupRoute === 'LinkChildQrAuth'
+      ) {
+        await Promise.all([
+          setPreAuthSetupRoute('AddChildIntro'),
+          clearPendingLinkChild(),
+        ]);
+        if (cancelled) {
+          return;
+        }
+        setInitialRouteName('AddChildIntro');
+        setReady(true);
         return;
       }
 

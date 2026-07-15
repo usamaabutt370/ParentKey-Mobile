@@ -1,12 +1,17 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
+  BackHandler,
   Dimensions,
+  Easing,
   Image,
+  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthButton, ScreenBackground } from '../../../components';
 import { WelcomeSlideOverlay } from '../../../components/parent/WelcomeSlideOverlay';
@@ -28,16 +33,103 @@ const GAP = spacing.sm;
 const COMPARE_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - GAP) / 2;
 const COMPARE_HEIGHT = COMPARE_WIDTH * 1.35;
 const GRID_SIZE = COMPARE_WIDTH;
+const AUTO_ADVANCE_MS = 4500;
+const SLIDE_COUNT = PARENT_WELCOME_SLIDES.length;
 
 export function ParentWelcomeScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [index, setIndex] = useState(0);
+  const progress = useRef(new Animated.Value(0)).current;
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
   const slide = PARENT_WELCOME_SLIDES[index];
-  const isLast = index === PARENT_WELCOME_SLIDES.length - 1;
+  const isLast = index === SLIDE_COUNT - 1;
 
-  const handleNext = () => {
+  const stopProgress = useCallback(() => {
+    animationRef.current?.stop();
+    animationRef.current = null;
+  }, []);
+
+  // Fill the active step bar, then advance (Stories-style).
+  useEffect(() => {
+    stopProgress();
+    progress.setValue(0);
+
+    if (index >= SLIDE_COUNT - 1) {
+      // Last slide: fill fully and wait for Get started.
+      animationRef.current = Animated.timing(progress, {
+        toValue: 1,
+        duration: AUTO_ADVANCE_MS,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      });
+      animationRef.current.start();
+      return stopProgress;
+    }
+
+    animationRef.current = Animated.timing(progress, {
+      toValue: 1,
+      duration: AUTO_ADVANCE_MS,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    });
+
+    animationRef.current.start(({ finished }) => {
+      if (finished) {
+        setIndex(current =>
+          current >= SLIDE_COUNT - 1 ? current : current + 1,
+        );
+      }
+    });
+
+    return stopProgress;
+  }, [index, progress, stopProgress]);
+
+  const goToDeviceRole = useCallback(() => {
+    stopProgress();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('DeviceRole');
+  }, [navigation, stopProgress]);
+
+  const handleSideNext = () => {
+    setIndex(current =>
+      current >= SLIDE_COUNT - 1 ? current : current + 1,
+    );
+  };
+
+  const handleSidePrevious = () => {
+    if (index <= 0) {
+      goToDeviceRole();
+      return;
+    }
+    setIndex(current => Math.max(0, current - 1));
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      const onHardwareBack = () => {
+        if (index <= 0) {
+          goToDeviceRole();
+          return true;
+        }
+        setIndex(current => Math.max(0, current - 1));
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onHardwareBack,
+      );
+      return () => subscription.remove();
+    }, [goToDeviceRole, index]),
+  );
+
+  const handleContinue = () => {
     if (isLast) {
+      stopProgress();
       Promise.all([
         markParentWelcomeVisited(),
         setPreAuthSetupRoute('AddChildIntro'),
@@ -57,15 +149,29 @@ export function ParentWelcomeScreen({ navigation }: Props) {
       <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
         <View style={styles.progressRow}>
           {PARENT_WELCOME_SLIDES.map((_, segmentIndex) => {
-            const fillRatio =
-              segmentIndex < index ? 1 : segmentIndex === index ? 0.85 : 0;
+            if (segmentIndex < index) {
+              return (
+                <View key={segmentIndex} style={styles.progressTrack}>
+                  <View style={[styles.progressFill, styles.progressFillFull]} />
+                </View>
+              );
+            }
+
+            if (segmentIndex > index) {
+              return <View key={segmentIndex} style={styles.progressTrack} />;
+            }
 
             return (
               <View key={segmentIndex} style={styles.progressTrack}>
-                <View
+                <Animated.View
                   style={[
                     styles.progressFill,
-                    { width: `${Math.round(fillRatio * 100)}%` },
+                    {
+                      width: progress.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0%', '100%'],
+                      }),
+                    },
                   ]}
                 />
               </View>
@@ -110,10 +216,25 @@ export function ParentWelcomeScreen({ navigation }: Props) {
           </View>
 
           <Text style={styles.title}>{slide.title}</Text>
+
+          <View style={styles.tapZones} pointerEvents="box-none">
+            <Pressable
+              accessibilityLabel="Previous slide"
+              accessibilityRole="button"
+              onPress={handleSidePrevious}
+              style={styles.tapZoneLeft}
+            />
+            <Pressable
+              accessibilityLabel="Next slide"
+              accessibilityRole="button"
+              onPress={handleSideNext}
+              style={styles.tapZoneRight}
+            />
+          </View>
         </View>
 
         <View style={styles.footer}>
-          <AuthButton onPress={handleNext} title={slide.buttonTitle} />
+          <AuthButton onPress={handleContinue} title={slide.buttonTitle} />
         </View>
       </SafeAreaView>
     </ScreenBackground>
@@ -132,6 +253,7 @@ function createStyles(colors: ColorPalette) {
       gap: 6,
       marginBottom: spacing.sm,
       marginTop: spacing.lg,
+      zIndex: 2,
     },
     progressTrack: {
       backgroundColor: colors.border.default,
@@ -145,14 +267,19 @@ function createStyles(colors: ColorPalette) {
       borderRadius: 999,
       height: '100%',
     },
+    progressFillFull: {
+      width: '100%',
+    },
     main: {
       flex: 1,
       gap: spacing.xl,
       justifyContent: 'center',
+      position: 'relative',
     },
     visualWrap: {
       marginBottom: spacing.md,
       position: 'relative',
+      zIndex: 0,
     },
     compareRow: {
       flexDirection: 'row',
@@ -193,10 +320,24 @@ function createStyles(colors: ColorPalette) {
       paddingHorizontal: spacing.xs,
       paddingTop: spacing.md,
       textAlign: 'center',
+      zIndex: 0,
+    },
+    tapZones: {
+      ...StyleSheet.absoluteFill,
+      flexDirection: 'row',
+      zIndex: 1,
+    },
+    tapZoneLeft: {
+      flex: 1,
+    },
+    tapZoneRight: {
+      flex: 1,
     },
     footer: {
+      bottom: 10,
       paddingBottom: spacing.md,
       paddingTop: spacing.lg,
+      zIndex: 2,
     },
   });
 }
