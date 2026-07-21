@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ScreenLayout } from '../components';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { useChildLinkGuard } from '../hooks/useChildLinkGuard';
 import { isChildSetupComplete } from '../lib/childSetup';
+import { hideSplashWhenReady } from '../lib/splash';
 import { ChildHomeScreen } from '../screens/ChildHomeScreen';
 import { ChildConsentScreen } from '../screens/child/ChildConsentScreen';
 import { ChildDeviceSyncScreen } from '../screens/child/ChildDeviceSyncScreen';
@@ -17,7 +15,6 @@ const Stack = createNativeStackNavigator<ChildStackParamList>();
 
 export function ChildStackNavigator() {
   const { session } = useAuth();
-  const { colors } = useTheme();
   const childId = session?.user.id;
   const [initialRoute, setInitialRoute] =
     useState<keyof ChildStackParamList | null>(null);
@@ -46,12 +43,15 @@ export function ChildStackNavigator() {
     };
   }, [childId]);
 
+  useEffect(() => {
+    if (initialRoute) {
+      hideSplashWhenReady();
+    }
+  }, [initialRoute]);
+
+  // Stay under the native splash — no blank/spinner frame.
   if (!initialRoute) {
-    return (
-      <ScreenLayout contentStyle={{ alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={colors.brand.tealLight} size="large" />
-      </ScreenLayout>
-    );
+    return null;
   }
 
   return (

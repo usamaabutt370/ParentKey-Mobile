@@ -6,10 +6,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { ActivityIndicator, StyleSheet } from 'react-native';
-import { ScreenLayout } from '../components';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import {
   clearPendingLinkChild,
   clearPreAuthSetupRoute,
@@ -17,6 +14,7 @@ import {
 } from '../lib/pendingParentAction';
 import { clearActivePairingSession } from '../lib/pairing';
 import { markParentOnboardingComplete } from '../lib/parentOnboarding';
+import { hideSplashWhenReady } from '../lib/splash';
 import { ParentOnboardingNavigator } from '../navigation/ParentOnboardingNavigator';
 import { ParentTabNavigator } from '../navigation/ParentTabNavigator';
 
@@ -40,7 +38,6 @@ export function useParentSetupOptional(): ParentSetupContextValue | null {
 
 export function ParentSetupGate() {
   const { session } = useAuth();
-  const { colors } = useTheme();
   const parentId = session?.user.id;
   const [checking, setChecking] = useState(true);
   const [needsLinkChildFlow, setNeedsLinkChildFlow] = useState(false);
@@ -91,12 +88,15 @@ export function ParentSetupGate() {
     [finishOnboarding],
   );
 
+  useEffect(() => {
+    if (!checking) {
+      hideSplashWhenReady();
+    }
+  }, [checking]);
+
+  // Stay under the native splash — no blank/spinner frame.
   if (checking) {
-    return (
-      <ScreenLayout contentStyle={styles.loading}>
-        <ActivityIndicator color={colors.brand.tealLight} size="large" />
-      </ScreenLayout>
-    );
+    return null;
   }
 
   return (
@@ -109,10 +109,3 @@ export function ParentSetupGate() {
     </ParentSetupContext.Provider>
   );
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

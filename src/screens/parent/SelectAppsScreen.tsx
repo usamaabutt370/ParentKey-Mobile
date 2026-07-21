@@ -169,7 +169,14 @@ export function SelectAppsScreen({ navigation, route }: Props) {
       clearedAll
         ? 'All app blocks were removed. Changes will apply on the child device within a few seconds.'
         : 'Blocked apps were saved. They will apply on the child device within a few seconds.',
-      [{ text: 'OK', onPress: () => navigation.popToTop() }],
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            navigation.navigate('ControlsList');
+          },
+        },
+      ],
     );
   };
 

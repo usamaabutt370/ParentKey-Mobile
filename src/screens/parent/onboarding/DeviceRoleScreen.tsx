@@ -22,11 +22,11 @@ import { radii, spacing, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'DeviceRole'>;
 
-const PARENT_COLOR = '#7B61C8';
-const KID_COLOR = '#F08A3A';
+const PARENT_COLOR = '#0EAF94';
+const KID_COLOR = '#0998AA';
 
 const COLLAPSED_HEIGHT = 92;
-const EXPANDED_HEIGHT = 300;
+const EXPANDED_HEIGHT = 380;
 
 type RoleCardProps = {
   colors: ColorPalette;
@@ -79,7 +79,12 @@ function RoleCard({
             backgroundColor: expanded
               ? selectedColor
               : colors.input.background,
-            borderColor: expanded ? selectedColor : colors.border.default,
+            borderColor: expanded ? selectedColor : colors.input.border,
+            shadowColor: expanded ? selectedColor : colors.input.shadow,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.25,
+            shadowRadius: 12,
+            borderWidth: expanded ? 0 : 1.5,
             height,
           },
         ]}>
@@ -115,7 +120,13 @@ function RoleCard({
 
         <Animated.View
           pointerEvents="none"
-          style={[styles.imageWrap, { opacity: imageOpacity }]}>
+          style={[
+            styles.imageWrap,
+            {
+              backgroundColor: expanded ? selectedColor : 'transparent',
+              opacity: imageOpacity,
+            },
+          ]}>
           <Image resizeMode="contain" source={image} style={styles.image} />
         </Animated.View>
       </Animated.View>
@@ -255,13 +266,13 @@ function createCardStyles(colors: ColorPalette) {
     },
     imageWrap: {
       alignItems: 'center',
-      bottom: 4,
-      left: spacing.md,
+      bottom: 0,
+      left: 0,
       position: 'absolute',
-      right: spacing.md,
+      right: 0,
     },
     image: {
-      height: 180,
+      height: 260,
       width: '100%',
     },
   });

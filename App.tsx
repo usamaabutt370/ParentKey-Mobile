@@ -10,6 +10,7 @@ import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import './src/lib/splash';
 import { RootNavigator } from './src/navigation/RootNavigator';
 
 function AppContent() {

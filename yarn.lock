@@ -1177,6 +1177,25 @@
   dependencies:
     node-forge "^1.3.3"
 
+"@expo/config-plugins@~56.0.13":
+  version "56.0.13"
+  resolved "https://registry.yarnpkg.com/@expo/config-plugins/-/config-plugins-56.0.13.tgz#813fb90c2441d01e39876e75d827b05447133c13"
+  integrity sha512-BWtRkvUKLb4xaMLTRXmrHPHl+RI5nKF2MKJEXODHmLtVgUlXOz66XSCU4bEvjfr8yYTx+8DQ0JO54Y7Y0kwokA==
+  dependencies:
+    "@expo/config-types" "^56.0.7"
+    "@expo/json-file" "~10.2.0"
+    "@expo/plist" "^0.7.0"
+    "@expo/require-utils" "^56.1.5"
+    "@expo/sdk-runtime-versions" "^1.0.0"
+    chalk "^4.1.2"
+    debug "^4.3.5"
+    getenv "^2.0.0"
+    glob "^13.0.0"
+    semver "^7.5.4"
+    slugify "^1.6.6"
+    xcode "^3.0.1"
+    xml2js "0.6.0"
+
 "@expo/config-plugins@~56.0.8", "@expo/config-plugins@~56.0.9":
   version "56.0.9"
   resolved "https://registry.npmjs.org/@expo/config-plugins/-/config-plugins-56.0.9.tgz"
@@ -1200,6 +1219,11 @@
   version "56.0.6"
   resolved "https://registry.npmjs.org/@expo/config-types/-/config-types-56.0.6.tgz"
   integrity sha512-4Y6Aum5J4Re5NnxGVofRNe1aDwUBOmWhQYkynZsqzRtX/zEA1ADUeyHXuEckv9YD9djiyT7bKtLt5gKL3mA6VQ==
+
+"@expo/config-types@^56.0.7":
+  version "56.0.7"
+  resolved "https://registry.yarnpkg.com/@expo/config-types/-/config-types-56.0.7.tgz#2dca8f469f5af29a772933a18e28dd8f97afd53a"
+  integrity sha512-V7bxawNsNned/yMppAHdisIOxniZXgPKRWpIUiQOQBs45/A5MBd2gfDM4Ecq5gnbilnQUTaI6Zxn6JcW7L3TAA==
 
 "@expo/config@~56.0.9":
   version "56.0.9"
@@ -1274,6 +1298,19 @@
   integrity sha512-YDeefvmYdihS7Wp3ESDUVnOgOSWmj2Cczm9lVNDdm4MqQLdAKm/LPYg83HtFQPfefRlAxyHrQR/O9kIXN9C1Wg==
   dependencies:
     "@expo/require-utils" "^56.1.3"
+    "@expo/spawn-async" "^1.8.0"
+    chalk "^4.0.0"
+    getenv "^2.0.0"
+    jimp-compact "0.16.1"
+    parse-png "^2.1.0"
+    semver "^7.6.0"
+
+"@expo/image-utils@^0.10.3":
+  version "0.10.3"
+  resolved "https://registry.yarnpkg.com/@expo/image-utils/-/image-utils-0.10.3.tgz#6bdd1a3f5410989174fa9a4d86a715f415d6e9f4"
+  integrity sha512-FgVp21Q05GRi08XwkzdZbBb/sBgCcP66snxlyN/HyisdtTcSbTr1qV5wkXYjq+6Q1xllXiKLmCwjDvydoN2vyg==
+  dependencies:
+    "@expo/require-utils" "^56.1.5"
     "@expo/spawn-async" "^1.8.0"
     chalk "^4.0.0"
     getenv "^2.0.0"
@@ -1440,6 +1477,15 @@
   version "56.1.3"
   resolved "https://registry.npmjs.org/@expo/require-utils/-/require-utils-56.1.3.tgz"
   integrity sha512-KyLeOn/zzQSvuPpV5YhB/FPKnpQytno4luN918bGdPDssLBoS3N/0UbC3W0rJAn9kSFu+XpfR81eABRVsSdfgQ==
+  dependencies:
+    "@babel/code-frame" "^7.20.0"
+    "@babel/core" "^7.25.2"
+    "@babel/plugin-transform-modules-commonjs" "^7.24.8"
+
+"@expo/require-utils@^56.1.5":
+  version "56.1.5"
+  resolved "https://registry.yarnpkg.com/@expo/require-utils/-/require-utils-56.1.5.tgz#d9fa07d1848f4f20f9ec6975ff865acdd69d9156"
+  integrity sha512-3wsdJLSpELhRPEMZCCREqAAFRGG23BUWJHGKIUxyqGkWvy5KPdzlBxGlVVb/6h9gNOflqgTtvTWaP2EuHoQ1HQ==
   dependencies:
     "@babel/code-frame" "^7.20.0"
     "@babel/core" "^7.25.2"
@@ -4292,6 +4338,15 @@ expo-server@^56.0.5:
   version "56.0.5"
   resolved "https://registry.npmjs.org/expo-server/-/expo-server-56.0.5.tgz"
   integrity sha512-SmM2p2g3Jrktpiazcst+OxhjSzOHXKAY4BPURHYHXvApzzoybMmrNF4IEZ8DKZ145BhSe4ydAmlEFCRTsdtgUQ==
+
+expo-splash-screen@~56.0.13:
+  version "56.0.13"
+  resolved "https://registry.yarnpkg.com/expo-splash-screen/-/expo-splash-screen-56.0.13.tgz#7d3a81f0e2b35850c6ecf133bbb59e7d52b3e260"
+  integrity sha512-8+ytfHX4/B5sj97N4PIzm4IP/7uDbbYTsY/vOMWa7ASTVkGZB+pXB23dBwBu7TcKx5w9Wt0NkaPAwy6dhNEdag==
+  dependencies:
+    "@expo/config-plugins" "~56.0.13"
+    "@expo/image-utils" "^0.10.3"
+    xml2js "0.6.0"
 
 expo@^56.0.12:
   version "56.0.12"

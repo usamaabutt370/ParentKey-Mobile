@@ -1,8 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ScreenLayout } from '../components';
-import { useTheme } from '../context/ThemeContext';
 import { APP_VARIANT } from '../lib/appInfo';
 import {
   clearPendingLinkChild,
@@ -11,6 +8,7 @@ import {
   isParentWelcomeVisited,
   setPreAuthSetupRoute,
 } from '../lib/pendingParentAction';
+import { hideSplashWhenReady } from '../lib/splash';
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { SignupScreen } from '../screens/SignupScreen';
@@ -25,7 +23,6 @@ const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 export function AuthNavigator() {
   const showSignup = APP_VARIANT !== 'child';
-  const { colors } = useTheme();
   const [ready, setReady] = useState(!showSignup);
   const [initialRouteName, setInitialRouteName] =
     useState<keyof AuthStackParamList>(showSignup ? 'DeviceRole' : 'Login');
@@ -89,12 +86,15 @@ export function AuthNavigator() {
     };
   }, [showSignup]);
 
+  useEffect(() => {
+    if (ready) {
+      hideSplashWhenReady();
+    }
+  }, [ready]);
+
+  // Stay under the native splash — no blank/spinner frame.
   if (!ready) {
-    return (
-      <ScreenLayout contentStyle={styles.loading}>
-        <ActivityIndicator color={colors.brand.tealLight} size="large" />
-      </ScreenLayout>
-    );
+    return null;
   }
 
   return (
@@ -137,11 +137,4 @@ export function AuthNavigator() {
     </Stack.Navigator>
   );
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
 
