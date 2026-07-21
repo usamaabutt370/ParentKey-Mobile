@@ -310,6 +310,123 @@ class AppBlockingModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  @ReactMethod
+  fun persistSyncCredentials(
+    supabaseUrl: String,
+    supabaseAnonKey: String,
+    accessToken: String,
+    refreshToken: String,
+    childId: String,
+    deviceId: String?,
+    promise: Promise,
+  ) {
+    try {
+      ParentKeySyncCredentials.save(
+        reactApplicationContext,
+        supabaseUrl,
+        supabaseAnonKey,
+        accessToken,
+        refreshToken,
+        childId,
+        deviceId,
+      )
+      promise.resolve(true)
+    } catch (error: Exception) {
+      promise.reject("PERSIST_SYNC_CREDENTIALS_ERROR", error.message, error)
+    }
+  }
+
+  @ReactMethod
+  fun clearSyncCredentials(promise: Promise) {
+    try {
+      ParentKeySyncCredentials.clear(reactApplicationContext)
+      ParentKeySyncWorker.cancelAll(reactApplicationContext)
+      ParentKeySyncForegroundService.stop(reactApplicationContext)
+      promise.resolve(true)
+    } catch (error: Exception) {
+      promise.reject("CLEAR_SYNC_CREDENTIALS_ERROR", error.message, error)
+    }
+  }
+
+  @ReactMethod
+  fun startBackgroundSync(promise: Promise) {
+    try {
+      ParentKeySyncWorker.schedulePeriodic(reactApplicationContext)
+      ParentKeySyncWorker.enqueueImmediate(reactApplicationContext)
+      ParentKeySyncForegroundService.start(reactApplicationContext)
+      promise.resolve(true)
+    } catch (error: Exception) {
+      promise.reject("START_BACKGROUND_SYNC_ERROR", error.message, error)
+    }
+  }
+
+  @ReactMethod
+  fun stopBackgroundSync(promise: Promise) {
+    try {
+      ParentKeySyncWorker.cancelAll(reactApplicationContext)
+      ParentKeySyncForegroundService.stop(reactApplicationContext)
+      promise.resolve(true)
+    } catch (error: Exception) {
+      promise.reject("STOP_BACKGROUND_SYNC_ERROR", error.message, error)
+    }
+  }
+
+  @ReactMethod
+  fun runBackgroundSyncNow(promise: Promise) {
+    try {
+      val result = ParentKeyRemoteSync.syncNow(reactApplicationContext)
+      if (result.ok) {
+        promise.resolve(result.blockedCount)
+      } else {
+        promise.reject("BACKGROUND_SYNC_FAILED", result.message ?: "Sync failed")
+      }
+    } catch (error: Exception) {
+      promise.reject("BACKGROUND_SYNC_ERROR", error.message, error)
+    }
+  }
+
+  @ReactMethod
+  fun getFcmToken(promise: Promise) {
+    try {
+      val messagingClass = Class.forName("com.google.firebase.messaging.FirebaseMessaging")
+      val instance = messagingClass.getMethod("getInstance").invoke(null)
+      val task = messagingClass.getMethod("getToken").invoke(instance)
+      val taskClass = task.javaClass
+      val addOnComplete =
+        taskClass.methods.first { it.name == "addOnCompleteListener" && it.parameterTypes.size == 1 }
+      val listenerClass = Class.forName("com.google.android.gms.tasks.OnCompleteListener")
+      val listener =
+        java.lang.reflect.Proxy.newProxyInstance(
+          listenerClass.classLoader,
+          arrayOf(listenerClass),
+        ) { _, method, args ->
+          if (method.name == "onComplete") {
+            val completedTask = args!![0]
+            val isSuccessful =
+              completedTask.javaClass.getMethod("isSuccessful").invoke(completedTask) as Boolean
+            if (isSuccessful) {
+              val token =
+                completedTask.javaClass.getMethod("getResult").invoke(completedTask) as? String
+              if (!token.isNullOrBlank()) {
+                ParentKeySyncCredentials.saveFcmToken(reactApplicationContext, token)
+              }
+              promise.resolve(token)
+            } else {
+              val exception =
+                completedTask.javaClass.getMethod("getException").invoke(completedTask) as? Exception
+              promise.reject("FCM_TOKEN_ERROR", exception?.message ?: "Failed to get FCM token")
+            }
+          }
+          null
+        }
+      addOnComplete.invoke(task, listener)
+    } catch (_: ClassNotFoundException) {
+      promise.resolve(null)
+    } catch (error: Exception) {
+      promise.reject("FCM_TOKEN_ERROR", error.message, error)
+    }
+  }
+
   private fun isAccessibilityEnabled(context: Context): Boolean {
     val expectedComponent =
       ComponentName(context.packageName, AppBlockingService::class.java.name).flattenToString()

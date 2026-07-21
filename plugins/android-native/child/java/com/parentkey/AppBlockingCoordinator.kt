@@ -1,21 +1,24 @@
 package com.parentkey
 
-import android.accessibilityservice.AccessibilityService
-
 /**
- * Shared state between the accessibility service and the overlay so dismiss
- * does not depend on window events that the overlay itself can trigger.
+ * Shared state for block-flow debounce / escape. Overlay is no longer used to
+ * trap the user; kept only to clear leftovers from older app versions.
  */
 object AppBlockingCoordinator {
   @Volatile
-  var shieldedPackage: String? = null
+  private var suppressBlockingUntilElapsedRealtime: Long = 0L
 
-  fun isShieldActive(): Boolean {
-    return shieldedPackage != null && AppBlockingOverlayManager.isVisible()
+  fun shouldSuppressBlocking(): Boolean {
+    return android.os.SystemClock.elapsedRealtime() < suppressBlockingUntilElapsedRealtime
   }
 
-  fun dismissShield() {
-    shieldedPackage = null
+  fun beginHomeEscape(suppressMs: Long = 2_500L) {
+    suppressBlockingUntilElapsedRealtime =
+      android.os.SystemClock.elapsedRealtime() + suppressMs
+  }
+
+  fun forceClearAllOverlays() {
+    suppressBlockingUntilElapsedRealtime = 0L
     AppBlockingOverlayManager.hide()
   }
 }

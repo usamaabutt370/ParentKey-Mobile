@@ -10,6 +10,15 @@ class BootCompletedReceiver : BroadcastReceiver() {
       return
     }
 
+    // Blocked packages are persisted locally. The accessibility service
+    // resumes automatically when the user has already enabled it.
     AppBlockingPreferences.getBlockedPackages(context)
+
+    // Resume remote sync so parent changes apply without opening the app.
+    if (ParentKeySyncCredentials.read(context) != null) {
+      ParentKeySyncWorker.schedulePeriodic(context)
+      ParentKeySyncWorker.enqueueImmediate(context)
+      ParentKeySyncForegroundService.start(context)
+    }
   }
 }

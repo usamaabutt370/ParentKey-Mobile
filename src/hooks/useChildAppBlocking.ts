@@ -18,6 +18,7 @@ import {
   syncChildInstalledApps,
 } from '../lib/appRules';
 import { syncChildAppUsage } from '../lib/appUsage';
+import { enableChildBackgroundSync } from '../lib/childRemoteSync';
 import {
   getChildAppInventoryCache,
   hasRecentChildAppInventorySync,
@@ -260,6 +261,18 @@ export function useChildAppBlocking(
         deviceId: deviceResult.device.id,
         usageTrackingStartedAt: usageTrackingStartedRef.current,
       });
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const activeSession = sessionData.session;
+      if (activeSession?.access_token) {
+        await enableChildBackgroundSync({
+          childId,
+          accessToken: activeSession.access_token,
+          refreshToken: activeSession.refresh_token ?? '',
+          deviceId: deviceResult.device.id,
+        });
+      }
+
       return { ok: true };
     } catch (syncError) {
       const message =

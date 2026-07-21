@@ -19,6 +19,10 @@ import {
   type SignUpResult,
 } from '../lib/auth';
 import {
+  disableChildBackgroundSync,
+  refreshChildBackgroundSyncFromSession,
+} from '../lib/childRemoteSync';
+import {
   clearDeviceRoleChoice,
   clearParentWelcomeVisited,
   clearPendingLinkChild,
@@ -88,6 +92,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'PASSWORD_RECOVERY') {
         setPasswordRecoveryPending(true);
       }
+
+      const roleFromSession = getRoleFromSession(nextSession);
+      if (roleFromSession === 'child' && nextSession) {
+        void refreshChildBackgroundSyncFromSession();
+      } else if (event === 'SIGNED_OUT') {
+        void disableChildBackgroundSync();
+      }
     });
 
     void Linking.getInitialURL().then(handleAuthRedirect);
@@ -133,6 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     setPasswordRecoveryPending(false);
+    await disableChildBackgroundSync();
     try {
       await supabase.auth.signOut({ scope: 'local' });
     } catch {

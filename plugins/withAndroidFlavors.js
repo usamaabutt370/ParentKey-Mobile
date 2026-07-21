@@ -103,6 +103,11 @@ function withAndroidFlavors(config) {
         path.join(nativeRoot, 'shared', 'res'),
         path.join(androidAppSrc, 'main', 'res'),
       );
+      // Optional FCM sources (compiled only when google-services.json exists)
+      copyDirSync(
+        path.join(nativeRoot, 'childFirebase'),
+        path.join(config.modRequest.platformProjectRoot, 'app', 'src', 'childFirebase'),
+      );
 
       return config;
     },
