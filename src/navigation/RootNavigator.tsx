@@ -1,15 +1,14 @@
-import React, { useMemo } from 'react';
-import { ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
 import {
   DarkTheme,
   DefaultTheme,
   NavigationContainer,
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ScreenLayout } from '../components';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { APP_VARIANT } from '../lib/appInfo';
+import { hideSplashWhenReady } from '../lib/splash';
 import { ChildPairingScreen } from '../screens/child/ChildPairingScreen';
 import { WrongAppScreen } from '../screens/WrongAppScreen';
 import type { ColorPalette } from '../theme/colors';
@@ -25,7 +24,11 @@ function AppStackNavigator() {
   const { role } = useAuth();
 
   if (role && APP_VARIANT && role !== APP_VARIANT) {
-    return <WrongAppScreen accountRole={role} appVariant={APP_VARIANT} />;
+    return (
+      <SplashReadyOnMount>
+        <WrongAppScreen accountRole={role} appVariant={APP_VARIANT} />
+      </SplashReadyOnMount>
+    );
   }
 
   if (role === 'child' || APP_VARIANT === 'child') {
@@ -65,24 +68,25 @@ export function RootNavigator() {
     () => buildNavigationTheme(colors, isDark),
     [colors, isDark],
   );
-  const styles = useMemo(() => createStyles(), []);
 
+  // Keep the native splash up while the session is restored — do not paint a
+  // blank/spinner frame underneath it.
   if (loading) {
-    return (
-      <ScreenLayout contentStyle={styles.loading}>
-        <ActivityIndicator color={colors.brand.tealLight} size="large" />
-      </ScreenLayout>
-    );
+    return null;
   }
 
   return (
     <NavigationContainer theme={navigationTheme}>
       {passwordRecoveryPending ? (
-        <ResetPasswordScreen />
+        <SplashReadyOnMount>
+          <ResetPasswordScreen />
+        </SplashReadyOnMount>
       ) : session ? (
         <AppStackNavigator />
       ) : APP_VARIANT === 'child' ? (
-        <ChildPairingScreen />
+        <SplashReadyOnMount>
+          <ChildPairingScreen />
+        </SplashReadyOnMount>
       ) : (
         <AuthNavigator />
       )}
@@ -90,11 +94,11 @@ export function RootNavigator() {
   );
 }
 
-function createStyles() {
-  return StyleSheet.create({
-    loading: {
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-  });
+/** Hides the splash on the first paint of a screen that needs no extra gate. */
+function SplashReadyOnMount({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    hideSplashWhenReady();
+  }, []);
+
+  return <>{children}</>;
 }

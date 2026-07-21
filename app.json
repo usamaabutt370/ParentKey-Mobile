@@ -27,6 +27,7 @@
         "cameraPermission": "ParentKey Child needs camera access so you can take a profile picture."
       }
     ],
-    "./plugins/withAndroidFlavors.js"
+    "./plugins/withAndroidFlavors.js",
+    "expo-splash-screen"
   ]
 }
