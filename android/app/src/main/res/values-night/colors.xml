@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="splash_background">#050A14</color>
+    <!-- rgb 11,83,82 -->
+    <color name="splash_background">#0B5352</color>
 </resources>

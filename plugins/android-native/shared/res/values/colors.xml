@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Splash background for light mode; dark mode override lives in values-night. -->
-    <color name="splash_background">#ECFEFF</color>
+    <!-- Splash background for light mode (rgb 145,224,218); dark mode override
+         lives in values-night. -->
+    <color name="splash_background">#91E0DA</color>
 </resources>
