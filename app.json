@@ -1,16 +1,16 @@
 {
   "name": "ParentKey",
   "displayName": "ParentKey",
-  "icon": "./assets/appicon/app-icon-1024.png",
+  "icon": "./assets/appicon/parent-icon-1024.png",
   "ios": {
     "bundleIdentifier": "org.reactjs.native.example.ParentKey",
-    "icon": "./assets/appicon/app-icon-1024.png"
+    "icon": "./assets/appicon/parent-icon-1024.png"
   },
   "android": {
     "package": "com.parentkey",
     "adaptiveIcon": {
-      "foregroundImage": "./assets/appicon/app-icon-adaptive-foreground.png",
-      "backgroundColor": "#0B5352"
+      "foregroundImage": "./assets/appicon/parent-icon-adaptive-foreground.png",
+      "backgroundColor": "#FFFFFF"
     }
   },
   "plugins": [
