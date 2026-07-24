@@ -7,11 +7,15 @@
     "icon": "./assets/appicon/parent-icon-1024.png"
   },
   "android": {
-    "package": "com.parentkey",
+    "package": "com.parentkey.parent",
     "adaptiveIcon": {
       "foregroundImage": "./assets/appicon/parent-icon-adaptive-foreground.png",
       "backgroundColor": "#FFFFFF"
-    }
+    },
+    "permissions": [
+      "android.permission.CAMERA",
+      "android.permission.RECORD_AUDIO"
+    ]
   },
   "plugins": [
     [
@@ -35,5 +39,49 @@
     ],
     "./plugins/withAndroidFlavors.js",
     "expo-splash-screen"
-  ]
+  ],
+  "extra": {
+    "eas": {
+      "build": {
+        "experimental": {
+          "ios": {
+            "appExtensions": [
+              {
+                "bundleIdentifier": "org.reactjs.native.example.ParentKey.ShieldConfiguration",
+                "targetName": "ShieldConfiguration",
+                "entitlements": {
+                  "com.apple.developer.family-controls": true,
+                  "com.apple.security.application-groups": [
+                    "group.org.reactjs.native.example.ParentKey"
+                  ]
+                }
+              },
+              {
+                "bundleIdentifier": "org.reactjs.native.example.ParentKey.ShieldAction",
+                "targetName": "ShieldAction",
+                "entitlements": {
+                  "com.apple.developer.family-controls": true,
+                  "com.apple.security.application-groups": [
+                    "group.org.reactjs.native.example.ParentKey"
+                  ]
+                }
+              },
+              {
+                "bundleIdentifier": "org.reactjs.native.example.ParentKey.ActivityMonitorExtension",
+                "targetName": "ActivityMonitorExtension",
+                "entitlements": {
+                  "com.apple.developer.family-controls": true,
+                  "com.apple.security.application-groups": [
+                    "group.org.reactjs.native.example.ParentKey"
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "projectId": "3d49ef42-320e-4b5f-a9ef-4761b1abcebc"
+    }
+  },
+  "owner": "umairbutt"
 }

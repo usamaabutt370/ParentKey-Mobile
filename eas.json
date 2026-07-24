@@ -1,0 +1,92 @@
+{
+  "cli": {
+    "version": ">= 13.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview-parent": {
+      "distribution": "internal",
+      "node": "22.11.0",
+      "env": {
+        "APP_VARIANT": "parent"
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleParentRelease",
+        "applicationArchivePath": "android/app/build/outputs/apk/parent/release/*.apk"
+      }
+    },
+    "preview-child": {
+      "distribution": "internal",
+      "node": "22.11.0",
+      "env": {
+        "APP_VARIANT": "child"
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleChildRelease",
+        "applicationArchivePath": "android/app/build/outputs/apk/child/release/*.apk"
+      }
+    },
+    "production-parent": {
+      "distribution": "store",
+      "node": "22.11.0",
+      "env": {
+        "APP_VARIANT": "parent"
+      },
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleParentRelease",
+        "applicationArchivePath": "android/app/build/outputs/bundle/parentRelease/*.aab"
+      },
+      "ios": {
+        "simulator": false,
+        "resourceClass": "m-medium"
+      }
+    },
+    "production-child": {
+      "distribution": "store",
+      "node": "22.11.0",
+      "env": {
+        "APP_VARIANT": "child"
+      },
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleChildRelease",
+        "applicationArchivePath": "android/app/build/outputs/bundle/childRelease/*.aab"
+      }
+    },
+    "production-parent-verify": {
+      "extends": "production-parent",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleParentRelease",
+        "applicationArchivePath": "android/app/build/outputs/apk/parent/release/*.apk"
+      }
+    },
+    "production-child-verify": {
+      "extends": "production-child",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleChildRelease",
+        "applicationArchivePath": "android/app/build/outputs/apk/child/release/*.apk"
+      }
+    }
+  },
+  "submit": {
+    "production-parent": {
+      "android": {
+        "applicationId": "com.parentkey.parent"
+      }
+    },
+    "production-child": {
+      "android": {
+        "applicationId": "com.parentkey.child"
+      }
+    }
+  }
+}

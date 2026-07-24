@@ -10,6 +10,20 @@ if (hasGoogleServices) {
 }
 
 /**
+ * Release signing secrets live outside version control in
+ * android/keystore.properties (gitignored — see keystore.properties.example).
+ * When that file is missing, release builds fall back to the debug keystore
+ * so local clones without the secrets can still build — but that output
+ * must never be uploaded to Play Console.
+ */
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+def hasReleaseSigning = keystorePropertiesFile.exists()
+if (hasReleaseSigning) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+/**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
@@ -91,17 +105,45 @@ android {
         versionCode 1
         versionName "1.0"
     }
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+        if (hasReleaseSigning) {
+            releaseParent {
+                storeFile rootProject.file(keystoreProperties['RELEASE_STORE_FILE'])
+                storePassword keystoreProperties['RELEASE_STORE_PASSWORD']
+                keyAlias keystoreProperties['RELEASE_KEY_ALIAS_PARENT']
+                keyPassword keystoreProperties['RELEASE_KEY_PASSWORD_PARENT']
+            }
+            releaseChild {
+                storeFile rootProject.file(keystoreProperties['RELEASE_STORE_FILE'])
+                storePassword keystoreProperties['RELEASE_STORE_PASSWORD']
+                keyAlias keystoreProperties['RELEASE_KEY_ALIAS_CHILD']
+                keyPassword keystoreProperties['RELEASE_KEY_PASSWORD_CHILD']
+            }
+        }
+    }
     flavorDimensions "role"
     productFlavors {
         parent {
             dimension "role"
             applicationId "com.parentkey.parent"
             resValue "string", "app_name", "ParentKey"
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.releaseParent
+            }
         }
         child {
             dimension "role"
             applicationId "com.parentkey.child"
             resValue "string", "app_name", "ParentKey Child"
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.releaseChild
+            }
         }
     }
     sourceSets {
@@ -111,22 +153,22 @@ android {
             }
         }
     }
-    signingConfigs {
-        debug {
-            storeFile file('debug.keystore')
-            storePassword 'android'
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
-        }
-    }
     buildTypes {
         debug {
+            // Explicit override: debug variants always use the debug keystore
+            // regardless of which flavor's signingConfig is set above.
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Real release signing comes from each product flavor's
+            // signingConfig (see productFlavors above), sourced from
+            // android/keystore.properties (gitignored, not in this repo).
+            // Without that file present, release builds fall back to the
+            // debug keystore so local clones can still build — but that
+            // output must never be uploaded to Play Console.
+            if (!hasReleaseSigning) {
+                signingConfig signingConfigs.debug
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
