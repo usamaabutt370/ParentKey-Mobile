@@ -10,7 +10,7 @@
     },
     "preview-parent": {
       "distribution": "internal",
-      "node": "22.11.0",
+      "node": "22.22.2",
       "env": {
         "APP_VARIANT": "parent"
       },
@@ -22,7 +22,7 @@
     },
     "preview-child": {
       "distribution": "internal",
-      "node": "22.11.0",
+      "node": "22.22.2",
       "env": {
         "APP_VARIANT": "child"
       },
@@ -34,7 +34,7 @@
     },
     "production-parent": {
       "distribution": "store",
-      "node": "22.11.0",
+      "node": "22.22.2",
       "env": {
         "APP_VARIANT": "parent"
       },
@@ -50,7 +50,7 @@
     },
     "production-child": {
       "distribution": "store",
-      "node": "22.11.0",
+      "node": "22.22.2",
       "env": {
         "APP_VARIANT": "child"
       },

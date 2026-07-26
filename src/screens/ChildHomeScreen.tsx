@@ -1,5 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AppState, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  AppState,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Feather from 'react-native-vector-icons/Feather';
 import { AuthButton, ScreenLayout, useScreenStyles } from '../components';
@@ -9,6 +17,7 @@ import { IOSScreenTimeAuthSection } from '../components/ios/IOSScreenTimeAuthSec
 import { IOSScreenTimePanel } from '../components/ios/IOSScreenTimePanel';
 import { useAuth } from '../context/AuthContext';
 import { useChildAppBlocking } from '../hooks/useChildAppBlocking';
+import { deleteOwnAccount } from '../lib/account';
 import {
   fetchOwnChildUninstallAllowed,
   subscribeToChildUninstallAllowed,
@@ -51,6 +60,7 @@ export function ChildHomeScreen({ navigation }: Props) {
   const [uninstallAllowed, setUninstallAllowed] = useState(false);
   const [deviceAdminActive, setDeviceAdminActive] = useState(false);
   const [updatingAdmin, setUpdatingAdmin] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (Platform.OS !== 'android') {
@@ -129,6 +139,49 @@ export function ChildHomeScreen({ navigation }: Props) {
     }
 
     await signOut();
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete account',
+      'This permanently deletes this child account and removes the link to your parent. Blocked apps and synced data for this device will be removed. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              setDeleting(true);
+
+              if (Platform.OS === 'android') {
+                try {
+                  await deactivateDeviceAdmin();
+                  setDeviceAdminActive(false);
+                } catch {
+                  // Continue with account deletion even if Device Admin stays on.
+                }
+              }
+
+              const result = await deleteOwnAccount();
+
+              if (!result.ok) {
+                setDeleting(false);
+                Alert.alert('Could not delete account', result.message);
+                return;
+              }
+
+              if (childId) {
+                await clearChildSetupComplete(childId);
+              }
+
+              await signOut();
+              setDeleting(false);
+            })();
+          },
+        },
+      ],
+    );
   };
 
   const handleRestoreProtection = async () => {
@@ -246,6 +299,20 @@ export function ChildHomeScreen({ navigation }: Props) {
           title="Unlink device"
           variant="secondary"
         />
+
+        <View style={styles.dangerSection}>
+          <Text style={styles.dangerTitle}>Danger zone</Text>
+          <Text style={styles.dangerBody}>
+            Deleting this account removes your child login and the link to your
+            parent. This cannot be undone.
+          </Text>
+          <AuthButton
+            loading={deleting}
+            onPress={handleDeleteAccount}
+            title="Delete account"
+            variant="secondary"
+          />
+        </View>
       </ScrollView>
     </ScreenLayout>
   );
@@ -286,6 +353,20 @@ function createStyles(colors: ColorPalette) {
       ...typography.body,
       color: colors.error,
       textAlign: 'center',
+    },
+    dangerSection: {
+      gap: spacing.sm,
+      marginTop: spacing.sm,
+    },
+    dangerTitle: {
+      ...typography.label,
+      color: colors.error,
+      fontSize: 16,
+    },
+    dangerBody: {
+      ...typography.caption,
+      color: colors.text.secondary,
+      lineHeight: 20,
     },
   });
 }
