@@ -17,6 +17,7 @@ import {
   type PairingSession,
 } from '../../../lib/pairing';
 import { supabase } from '../../../lib/supabase';
+import { useParentSetup } from '../../../navigation/ParentSetupGate';
 import type { ParentOnboardingParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { radii, spacing, typography } from '../../../theme';
@@ -27,8 +28,10 @@ type Props = NativeStackScreenProps<ParentOnboardingParamList, 'ShowPairingQr'>;
 export function ParentShowPairingQrScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { finishOnboarding } = useParentSetup();
   const [session, setSession] = useState<PairingSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [skipping, setSkipping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState(
     'Waiting for your child to scan this code…',
@@ -135,6 +138,19 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
     setStatusMessage('Waiting for your child to scan this code…');
   };
 
+  const handleSkip = async () => {
+    if (skipping) {
+      return;
+    }
+
+    setSkipping(true);
+    try {
+      await finishOnboarding();
+    } finally {
+      setSkipping(false);
+    }
+  };
+
   return (
     <ScreenLayout
       safeAreaEdges={['top', 'left', 'right', 'bottom']}
@@ -143,6 +159,8 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
       <ParentOnboardingStepLayout
         currentStep={3}
         icon="🔳"
+        onSkip={() => void handleSkip()}
+        skipLabel="Skip"
         subtitle="Open ParentKey Child on the other phone and scan this QR code."
         title="Link with QR code"
         totalSteps={PARENT_ONBOARDING_TOTAL_STEPS}>

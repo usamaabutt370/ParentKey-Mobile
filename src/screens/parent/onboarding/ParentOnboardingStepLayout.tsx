@@ -10,6 +10,8 @@ type Props = {
   currentStep: number;
   icon: string;
   onBack?: () => void;
+  onSkip?: () => void;
+  skipLabel?: string;
   subtitle: string;
   title: string;
   totalSteps: number;
@@ -20,24 +22,46 @@ export function ParentOnboardingStepLayout({
   currentStep,
   icon,
   onBack,
+  onSkip,
+  skipLabel = 'Skip',
   subtitle,
   title,
   totalSteps,
 }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const showTopBar = Boolean(onBack || onSkip);
 
   return (
     <View style={styles.container}>
-      {onBack ? (
-        <Pressable
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-          hitSlop={8}
-          onPress={onBack}
-          style={styles.backButton}>
-          <Feather color={colors.text.primary} name="chevron-left" size={24} />
-        </Pressable>
+      {showTopBar ? (
+        <View style={styles.topBar}>
+          {onBack ? (
+            <Pressable
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={onBack}
+              style={styles.backButton}>
+              <Feather color={colors.text.primary} name="chevron-left" size={24} />
+            </Pressable>
+          ) : (
+            <View style={styles.topBarSpacer} />
+          )}
+
+          {onSkip ? (
+            <Pressable
+              accessibilityLabel={skipLabel}
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={onSkip}
+              style={styles.skipButton}>
+              <Text style={styles.skipText}>{skipLabel}</Text>
+            </Pressable>
+          ) : (
+            <View style={styles.topBarSpacer} />
+          )}
+        </View>
       ) : null}
 
       <View style={styles.progressRow}>
@@ -72,10 +96,28 @@ function createStyles(colors: ColorPalette) {
       justifyContent: 'flex-start',
       paddingTop: spacing.sm,
     },
+    topBar: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      minHeight: 32,
+    },
+    topBarSpacer: {
+      width: 48,
+    },
     backButton: {
-      alignSelf: 'flex-start',
-      marginBottom: -spacing.xs,
       marginLeft: -spacing.xs,
+      padding: spacing.xs,
+    },
+    skipButton: {
+      marginRight: -spacing.xs,
+      paddingHorizontal: spacing.xs,
+      paddingVertical: spacing.xs,
+    },
+    skipText: {
+      ...typography.label,
+      color: colors.text.brand,
+      fontSize: 16,
     },
     progressRow: {
       flexDirection: 'row',
