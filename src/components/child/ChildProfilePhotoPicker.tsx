@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -51,13 +52,17 @@ export function ChildProfilePhotoPicker({ imageUri, onChange }: Props) {
   };
 
   const pickFromGallery = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert(
-        'Photo access needed',
-        'Allow photo library access to choose a profile photo.',
-      );
-      return;
+    // On Android, expo-image-picker uses the system photo picker for one-time
+    // selection, so broad READ_MEDIA_* access is not required or requested.
+    if (Platform.OS !== 'android') {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Photo access needed',
+          'Allow photo library access to choose a profile photo.',
+        );
+        return;
+      }
     }
 
     setPicking(true);

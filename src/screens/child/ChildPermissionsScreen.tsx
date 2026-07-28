@@ -42,7 +42,6 @@ export function ChildPermissionsScreen({ navigation }: Props) {
   >({
     usage: false,
     accessibility: false,
-    overlay: false,
     background: false,
     deviceAdmin: false,
   });

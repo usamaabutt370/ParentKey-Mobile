@@ -22,8 +22,7 @@ class AppBlockingService : AccessibilityService() {
   override fun onServiceConnected() {
     super.onServiceConnected()
     cachedLauncherPackages = null
-    // Clear any leftover overlay from older builds that could trap the user.
-    AppBlockingCoordinator.forceClearAllOverlays()
+    AppBlockingCoordinator.reset()
   }
 
   override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -43,11 +42,11 @@ class AppBlockingService : AccessibilityService() {
   }
 
   override fun onInterrupt() {
-    AppBlockingCoordinator.forceClearAllOverlays()
+    AppBlockingCoordinator.reset()
   }
 
   override fun onDestroy() {
-    AppBlockingCoordinator.forceClearAllOverlays()
+    AppBlockingCoordinator.reset()
     super.onDestroy()
   }
 

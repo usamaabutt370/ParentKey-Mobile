@@ -19,7 +19,7 @@ const STEPS: Step[] = [
     icon: '🔒',
     title: 'Enable app blocking',
     description:
-      "ParentKey needs Accessibility access to show a lock screen over apps your parent has blocked. Android requires you to turn this on yourself in Settings — we'll take you straight there.",
+      "ParentKey needs Accessibility access to block apps your parent chooses. Android requires you to turn this on yourself in Settings — we'll take you straight there.",
     buttonTitle: 'Continue to Settings',
   },
   {

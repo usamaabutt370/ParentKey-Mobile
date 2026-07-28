@@ -89,42 +89,6 @@ class AppBlockingModule(reactContext: ReactApplicationContext) :
   }
 
   @ReactMethod
-  fun canDrawOverlays(promise: Promise) {
-    try {
-      val granted =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-          Settings.canDrawOverlays(reactApplicationContext)
-        } else {
-          true
-        }
-      promise.resolve(granted)
-    } catch (error: Exception) {
-      promise.reject("OVERLAY_STATUS_ERROR", error.message, error)
-    }
-  }
-
-  @ReactMethod
-  fun openOverlaySettings(promise: Promise) {
-    try {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        val intent =
-          Intent(
-            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-            Uri.parse("package:${reactApplicationContext.packageName}"),
-          )
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        reactApplicationContext.startActivity(intent)
-        PermissionReturnWatcher.watch(reactApplicationContext) {
-          Settings.canDrawOverlays(reactApplicationContext)
-        }
-      }
-      promise.resolve(true)
-    } catch (error: Exception) {
-      promise.reject("OPEN_OVERLAY_SETTINGS_ERROR", error.message, error)
-    }
-  }
-
-  @ReactMethod
   fun isIgnoringBatteryOptimizations(promise: Promise) {
     try {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {

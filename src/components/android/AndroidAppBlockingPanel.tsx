@@ -88,7 +88,7 @@ export function AndroidAppBlockingPanel({
   return (
     <View style={styles.container}>
       {!accessibilityEnabled ? (
-        <InfoTipCard message="Step 1: Enable ParentKey in Android Accessibility settings. Step 2: Keep this app signed in so blocked apps sync from your parent. Blocked apps stay open but show a lock overlay on top." />
+        <InfoTipCard message="Step 1: Enable ParentKey in Android Accessibility settings. Step 2: Keep this app signed in so blocked apps sync from your parent. Blocked apps are interrupted and show a lock screen." />
       ) : null}
 
       {usageStatsSupported && !usageAccessGranted ? (

@@ -1,8 +1,7 @@
 package com.parentkey
 
 /**
- * Shared state for block-flow debounce / escape. Overlay is no longer used to
- * trap the user; kept only to clear leftovers from older app versions.
+ * Shared state for block-flow debounce / escape while leaving a blocked app.
  */
 object AppBlockingCoordinator {
   @Volatile
@@ -17,8 +16,7 @@ object AppBlockingCoordinator {
       android.os.SystemClock.elapsedRealtime() + suppressMs
   }
 
-  fun forceClearAllOverlays() {
+  fun reset() {
     suppressBlockingUntilElapsedRealtime = 0L
-    AppBlockingOverlayManager.hide()
   }
 }

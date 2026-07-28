@@ -1,10 +1,8 @@
 import { NativeModules, Platform } from 'react-native';
 import {
-  canDrawOverlays,
   isAccessibilityServiceEnabled,
   isAndroidAppBlockingSupported,
   openAccessibilitySettings,
-  openOverlaySettings,
 } from './androidAppBlocking';
 import {
   isAndroidUsageStatsSupported,
@@ -93,7 +91,6 @@ export async function deactivateDeviceAdmin(): Promise<void> {
 export type ChildPermissionKey =
   | 'usage'
   | 'accessibility'
-  | 'overlay'
   | 'background'
   | 'deviceAdmin';
 
@@ -129,28 +126,16 @@ export function getChildPermissionSteps(): ChildPermissionStep[] {
     return steps;
   }
 
-  steps.push(
-    {
-      key: 'accessibility',
-      icon: '🔒',
-      title: 'Enable app blocking',
-      description:
-        'ParentKey needs Accessibility access to block apps your parent chooses. Turn on ParentKey in the Accessibility list.',
-      buttonTitle: 'Open Accessibility settings',
-      isGranted: isAccessibilityServiceEnabled,
-      openSettings: openAccessibilitySettings,
-    },
-    {
-      key: 'overlay',
-      icon: '🖥️',
-      title: 'Allow display over apps',
-      description:
-        'ParentKey shows a lock screen over blocked apps. Allow display over other apps for ParentKey Child.',
-      buttonTitle: 'Open Display settings',
-      isGranted: canDrawOverlays,
-      openSettings: openOverlaySettings,
-    },
-  );
+  steps.push({
+    key: 'accessibility',
+    icon: '🔒',
+    title: 'Enable app blocking',
+    description:
+      'ParentKey needs Accessibility access to block apps your parent chooses. Turn on ParentKey in the Accessibility list.',
+    buttonTitle: 'Open Accessibility settings',
+    isGranted: isAccessibilityServiceEnabled,
+    openSettings: openAccessibilitySettings,
+  });
 
   if (hasProtectionApis()) {
     steps.push(

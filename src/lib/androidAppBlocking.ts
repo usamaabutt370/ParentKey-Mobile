@@ -6,8 +6,6 @@ type AppBlockingModule = {
   getBlockedPackages: () => Promise<string[]>;
   isAccessibilityServiceEnabled: () => Promise<boolean>;
   openAccessibilitySettings: () => Promise<boolean>;
-  canDrawOverlays: () => Promise<boolean>;
-  openOverlaySettings: () => Promise<boolean>;
 };
 
 const appBlockingModule = NativeModules.AppBlocking as AppBlockingModule | undefined;
@@ -50,16 +48,4 @@ export async function isAccessibilityServiceEnabled(): Promise<boolean> {
 
 export async function openAccessibilitySettings(): Promise<void> {
   await requireModule().openAccessibilitySettings();
-}
-
-export async function canDrawOverlays(): Promise<boolean> {
-  if (!isAndroidAppBlockingSupported()) {
-    return false;
-  }
-
-  return appBlockingModule!.canDrawOverlays();
-}
-
-export async function openOverlaySettings(): Promise<void> {
-  await requireModule().openOverlaySettings();
 }
