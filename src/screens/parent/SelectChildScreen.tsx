@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthButton, ScreenLayout } from '../../components';
 import { ChildCard, ScreenHeader } from '../../components/parent';
@@ -44,8 +44,9 @@ export function SelectChildScreen({ navigation, route }: Props) {
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>No linked children</Text>
           <Text style={styles.emptyBody}>
-            Add a child account first, then have them sign in on their Android
-            device to upload installed apps.
+            {Platform.OS === 'ios'
+              ? 'Add a child account first, then have them sign in on their iPhone and set up Screen Time.'
+              : 'Add a child account first, then have them sign in on their Android device to upload installed apps.'}
           </Text>
           <AuthButton
             onPress={() =>

@@ -229,8 +229,12 @@ export function SelectAppsScreen({ navigation, route }: Props) {
           onBack={() => navigation.goBack()}
           subtitle={
             mode === 'block'
-              ? "Choose apps to block on your child's Android device"
-              : "Choose apps to limit on your child's device"
+              ? Platform.OS === 'ios'
+                ? "Set up app blocking on your child's iPhone with Screen Time"
+                : "Choose apps to block on your child's Android device"
+              : Platform.OS === 'ios'
+                ? "Set up app limits on your child's iPhone with Screen Time"
+                : "Choose apps to limit on your child's device"
           }
           title="Select apps"
         />

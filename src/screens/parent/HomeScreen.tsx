@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import {
@@ -100,7 +100,9 @@ export function ParentHomeScreen() {
           <TopAppsReport apps={topApps} />
         ) : (
           <Text style={styles.emptyUsageText}>
-            Usage data appears after the child enables Usage access and syncs.
+            {Platform.OS === 'ios'
+              ? 'App usage sync is not available on iOS. Use Screen Time on the child device for limits and blocking.'
+              : 'Usage data appears after the child enables Usage access and syncs.'}
           </Text>
         )}
       </View>
@@ -108,7 +110,11 @@ export function ParentHomeScreen() {
       <View style={styles.section}>
         <SectionHeader title="Weekly overview" />
         {weeklyUsage.every(day => day.hours === 0) ? (
-          <Text style={styles.emptyUsageText}>No weekly usage synced yet.</Text>
+          <Text style={styles.emptyUsageText}>
+            {Platform.OS === 'ios'
+              ? 'Weekly usage sync is not available for child iPhones.'
+              : 'No weekly usage synced yet.'}
+          </Text>
         ) : (
           <WeeklyUsageChart data={weeklyUsage} />
         )}

@@ -210,31 +210,52 @@ export function ChildHomeScreen({ navigation }: Props) {
         <View style={styles.statusCard}>
           <View style={styles.statusRow}>
             <Feather
-              color={permissionsReady ? colors.success : colors.error}
-              name={permissionsReady ? 'check-circle' : 'alert-circle'}
+              color={
+                Platform.OS === 'ios' || permissionsReady
+                  ? colors.success
+                  : colors.error
+              }
+              name={
+                Platform.OS === 'ios' || permissionsReady
+                  ? 'check-circle'
+                  : 'alert-circle'
+              }
               size={20}
             />
             <Text style={styles.statusTitle}>
-              {permissionsReady ? 'Protection active' : 'Setup incomplete'}
+              {Platform.OS === 'ios'
+                ? 'Linked to parent'
+                : permissionsReady
+                  ? 'Protection active'
+                  : 'Setup incomplete'}
             </Text>
           </View>
-          <Text style={styles.statusBody}>
-            Last sync: {formatLastSync(androidBlocking.lastSyncedAt)}
-          </Text>
-          <Text style={styles.statusBody}>
-            Apps on device: {androidBlocking.installedApps.length}
-          </Text>
-          <Text style={styles.statusBody}>
-            Blocked apps: {androidBlocking.blockedCount}
-          </Text>
-          <Text style={styles.statusBody}>
-            Uninstall:{' '}
-            {uninstallAllowed
-              ? 'Allowed by parent'
-              : deviceAdminActive
-                ? 'Protected'
-                : 'Not protected'}
-          </Text>
+          {Platform.OS === 'android' ? (
+            <>
+              <Text style={styles.statusBody}>
+                Last sync: {formatLastSync(androidBlocking.lastSyncedAt)}
+              </Text>
+              <Text style={styles.statusBody}>
+                Apps on device: {androidBlocking.installedApps.length}
+              </Text>
+              <Text style={styles.statusBody}>
+                Blocked apps: {androidBlocking.blockedCount}
+              </Text>
+              <Text style={styles.statusBody}>
+                Uninstall:{' '}
+                {uninstallAllowed
+                  ? 'Allowed by parent'
+                  : deviceAdminActive
+                    ? 'Protected'
+                    : 'Not protected'}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.statusBody}>
+              Use Screen Time below to block or limit apps on this iPhone. App
+              lists are not synced to the parent app on iOS.
+            </Text>
+          )}
         </View>
 
         {uninstallAllowed && Platform.OS === 'android' ? (

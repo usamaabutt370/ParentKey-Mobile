@@ -1,5 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Feather from 'react-native-vector-icons/Feather';
 import { AuthButton, ScreenLayout } from '../../components';
@@ -36,6 +42,20 @@ export function ChildDeviceSyncScreen({ navigation }: Props) {
 
     hasStartedRef.current = true;
 
+    // App inventory sync is Android-only. Skip this screen on iOS.
+    if (Platform.OS === 'ios') {
+      const finishIos = async () => {
+        await markChildSetupComplete(childId);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'ChildHome' }],
+        });
+      };
+
+      void finishIos();
+      return;
+    }
+
     const runSync = async () => {
       setPhase('registering');
       await new Promise<void>(resolve => {
@@ -47,13 +67,25 @@ export function ChildDeviceSyncScreen({ navigation }: Props) {
     };
 
     void runSync();
-  }, [childId, syncNow]);
+  }, [childId, navigation, syncNow]);
 
   useEffect(() => {
     if (phase === 'done' && childId) {
       void markChildSetupComplete(childId);
     }
   }, [childId, phase]);
+
+  if (Platform.OS === 'ios') {
+    return (
+      <ScreenLayout
+        safeAreaEdges={['top', 'left', 'right', 'bottom']}
+        contentStyle={styles.content}>
+        <View style={styles.centered}>
+          <ActivityIndicator color={colors.brand.tealLight} size="large" />
+        </View>
+      </ScreenLayout>
+    );
+  }
 
   const statusMessage =
     phase === 'registering'
@@ -138,20 +170,20 @@ function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     content: {
       flexGrow: 1,
-      paddingBottom: spacing.lg,
+      justifyContent: 'center',
+      gap: spacing.lg,
     },
     centered: {
       alignItems: 'center',
       justifyContent: 'center',
       minHeight: 120,
+      paddingVertical: spacing.lg,
     },
     checkCircle: {
       alignItems: 'center',
-      backgroundColor: colors.background.accentStrong,
-      borderRadius: 999,
-      height: 80,
       justifyContent: 'center',
-      width: 80,
+      height: 72,
+      width: 72,
     },
     errorText: {
       ...typography.body,

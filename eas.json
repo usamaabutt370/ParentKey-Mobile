@@ -18,6 +18,10 @@
         "buildType": "apk",
         "gradleCommand": ":app:assembleParentRelease",
         "applicationArchivePath": "android/app/build/outputs/apk/parent/release/*.apk"
+      },
+      "ios": {
+        "simulator": false,
+        "resourceClass": "m-medium"
       }
     },
     "preview-child": {
@@ -30,6 +34,10 @@
         "buildType": "apk",
         "gradleCommand": ":app:assembleChildRelease",
         "applicationArchivePath": "android/app/build/outputs/apk/child/release/*.apk"
+      },
+      "ios": {
+        "simulator": false,
+        "resourceClass": "m-medium"
       }
     },
     "production-parent": {
@@ -58,6 +66,10 @@
         "buildType": "app-bundle",
         "gradleCommand": ":app:bundleChildRelease",
         "applicationArchivePath": "android/app/build/outputs/bundle/childRelease/*.aab"
+      },
+      "ios": {
+        "simulator": false,
+        "resourceClass": "m-medium"
       }
     },
     "production-parent-verify": {
@@ -81,11 +93,17 @@
     "production-parent": {
       "android": {
         "applicationId": "com.parentkey.parent"
+      },
+      "ios": {
+        "bundleIdentifier": "com.parentkey.parent"
       }
     },
     "production-child": {
       "android": {
         "applicationId": "com.parentkey.child"
+      },
+      "ios": {
+        "bundleIdentifier": "com.parentkey.child"
       }
     }
   }
