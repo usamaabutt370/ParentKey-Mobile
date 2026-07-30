@@ -1,5 +1,12 @@
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  type ImageSourcePropType,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useTheme } from '../../../context/ThemeContext';
 import type { ColorPalette } from '../../../theme/colors';
@@ -8,7 +15,8 @@ import { spacing, typography } from '../../../theme';
 type Props = {
   children: React.ReactNode;
   currentStep: number;
-  icon: string;
+  icon?: string;
+  image?: ImageSourcePropType;
   onBack?: () => void;
   onSkip?: () => void;
   skipLabel?: string;
@@ -21,6 +29,7 @@ export function ParentOnboardingStepLayout({
   children,
   currentStep,
   icon,
+  image,
   onBack,
   onSkip,
   skipLabel = 'Skip',
@@ -80,7 +89,16 @@ export function ParentOnboardingStepLayout({
       <Text style={styles.eyebrow}>
         Step {currentStep} of {totalSteps}
       </Text>
-      <Text style={styles.icon}>{icon}</Text>
+      {image ? (
+        <Image
+          accessibilityIgnoresInvertColors
+          resizeMode="contain"
+          source={image}
+          style={styles.heroImage}
+        />
+      ) : icon ? (
+        <Text style={styles.icon}>{icon}</Text>
+      ) : null}
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.subtitle}>{subtitle}</Text>
       <View style={styles.body}>{children}</View>
@@ -147,6 +165,12 @@ function createStyles(colors: ColorPalette) {
     icon: {
       fontSize: 48,
       textAlign: 'center',
+    },
+    heroImage: {
+      alignSelf: 'center',
+      borderRadius: 28,
+      height: 220,
+      width: 220,
     },
     title: {
       ...typography.title,

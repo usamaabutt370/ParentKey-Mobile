@@ -2,7 +2,6 @@ import React, { useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthButton, ScreenLayout } from '../../../components';
-import { InfoTipCard } from '../../../components/parent';
 import { PARENT_ONBOARDING_TOTAL_STEPS } from '../../../constants/parentOnboarding';
 import { useTheme } from '../../../context/ThemeContext';
 import { setPreAuthSetupRoute } from '../../../lib/pendingParentAction';
@@ -54,34 +53,29 @@ export function ParentAddChildIntroScreen({ navigation }: Props) {
   return (
     <ScreenLayout
       safeAreaEdges={['top', 'left', 'right', 'bottom']}
+      scrollable
       contentStyle={styles.content}>
-      <View style={styles.root}>
-        <View style={styles.setupContent}>
-          <ParentOnboardingStepLayout
-            currentStep={1}
-            icon="📱"
-            subtitle="ParentKey works with two apps: this parent app, and ParentKey Child on your child’s phone."
-            title="Add your child’s phone"
-            totalSteps={PARENT_ONBOARDING_TOTAL_STEPS}>
-            <View style={styles.list}>
-              <Text style={styles.listItem}>
-                1. Install ParentKey Child on their device
-              </Text>
-              <Text style={styles.listItem}>
-                2. Scan the QR code from this phone
-              </Text>
-              <Text style={styles.listItem}>
-                3. Your child accepts and grants permissions
-              </Text>
-            </View>
-
-            <InfoTipCard message="ParentKey Child cannot be installed in secret. Setup only works with your child’s knowledge and consent." />
-          </ParentOnboardingStepLayout>
+      <ParentOnboardingStepLayout
+        currentStep={1}
+        image={require('../../../../assets/onboarding/add-child-phones.png')}
+        subtitle="ParentKey works with two apps: this parent app, and ParentKey Child on your child’s phone."
+        title="Add your child’s phone"
+        totalSteps={PARENT_ONBOARDING_TOTAL_STEPS}>
+        <View style={styles.list}>
+          <Text style={styles.listItem}>
+            1. Install ParentKey Child on their device
+          </Text>
+          <Text style={styles.listItem}>
+            2. Scan the QR code from this phone
+          </Text>
+          <Text style={styles.listItem}>
+            3. Your child accepts and grants permissions
+          </Text>
         </View>
+      </ParentOnboardingStepLayout>
 
-        <View style={styles.footer}>
-          <AuthButton onPress={handleContinue} title="Continue" />
-        </View>
+      <View style={styles.footer}>
+        <AuthButton onPress={handleContinue} title="Continue" />
       </View>
     </ScreenLayout>
   );
@@ -90,20 +84,7 @@ export function ParentAddChildIntroScreen({ navigation }: Props) {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     content: {
-      flex: 1,
-    },
-    root: {
-      flex: 1,
-    },
-    setupContent: {
-      flex: 1,
-      paddingBottom: 140,
-    },
-    footer: {
-      bottom: 0,
-      left: 0,
-      position: 'absolute',
-      right: 0,
+      flexGrow: 1,
     },
     list: {
       gap: spacing.sm,
@@ -111,6 +92,10 @@ function createStyles(colors: ColorPalette) {
     listItem: {
       ...typography.body,
       color: colors.text.primary,
+    },
+    footer: {
+      marginTop: 'auto',
+      paddingTop: spacing.lg,
     },
   });
 }

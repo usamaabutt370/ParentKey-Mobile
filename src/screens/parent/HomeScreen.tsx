@@ -3,7 +3,6 @@ import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-nativ
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import {
-  ChildCard,
   RecentAlertsList,
   SectionHeader,
   StatCard,
@@ -13,7 +12,6 @@ import {
 import { ScreenLayout, useScreenStyles } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useParentChildren } from '../../hooks/useParentChildren';
 import { useParentActivityDashboard } from '../../hooks/useParentActivityDashboard';
 import type { ParentTabParamList } from '../../navigation/types';
 import type { ColorPalette } from '../../theme/colors';
@@ -27,22 +25,15 @@ export function ParentHomeScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { session } = useAuth();
-  const { children, loading: childrenLoading } = useParentChildren();
   const {
     summary,
     stats,
     topApps,
     weeklyUsage,
-    childSummaries,
     alerts,
     loading: activityLoading,
   } = useParentActivityDashboard();
   const firstName = session?.user.user_metadata?.first_name;
-
-  const summaryByChildId = useMemo(
-    () => new Map(childSummaries.map(item => [item.childId, item])),
-    [childSummaries],
-  );
 
   return (
     <ScreenLayout
@@ -128,46 +119,6 @@ export function ParentHomeScreen() {
           <RecentAlertsList alerts={alerts} />
         )}
       </View>
-
-      <View style={styles.section}>
-        <SectionHeader
-          actionLabel="See all"
-          onActionPress={() => navigation.navigate('Children')}
-          title="Your children"
-        />
-        <View style={styles.childList}>
-          {childrenLoading ? (
-            <ActivityIndicator color={colors.brand.tealLight} size="small" />
-          ) : children.length === 0 ? (
-            <Text style={styles.emptyChildrenText}>
-              No children linked yet. Tap See all to add one.
-            </Text>
-          ) : (
-            children.map(child => {
-              const activity = summaryByChildId.get(child.id);
-
-              return (
-                <ChildCard
-                  child={child}
-                  deviceStatus={activity?.deviceStatus}
-                  key={child.id}
-                  onPress={() =>
-                    navigation.navigate('Children', {
-                      screen: 'ChildDetail',
-                      params: { childId: child.id },
-                    })
-                  }
-                  screenTimeToday={
-                    activity && activity.todaySeconds > 0
-                      ? activity.todayLabel
-                      : undefined
-                  }
-                />
-              );
-            })
-          )}
-        </View>
-      </View>
     </ScreenLayout>
   );
 }
@@ -211,13 +162,6 @@ function createStyles(colors: ColorPalette) {
       color: colors.text.secondary,
     },
     emptyUsageText: {
-      ...typography.body,
-      color: colors.text.secondary,
-    },
-    childList: {
-      gap: spacing.sm,
-    },
-    emptyChildrenText: {
       ...typography.body,
       color: colors.text.secondary,
     },

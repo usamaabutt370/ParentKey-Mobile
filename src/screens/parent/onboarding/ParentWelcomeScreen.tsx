@@ -135,7 +135,10 @@ export function ParentWelcomeScreen({ navigation }: Props) {
         setPreAuthSetupRoute('AddChildIntro'),
       ])
         .then(() => {
-          navigation.navigate('AddChildIntro');
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'AddChildIntro' }],
+          });
         })
         .catch(() => undefined);
       return;
