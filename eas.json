@@ -12,7 +12,8 @@
       "distribution": "internal",
       "node": "22.22.2",
       "env": {
-        "APP_VARIANT": "parent"
+        "APP_VARIANT": "parent",
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
       },
       "android": {
         "buildType": "apk",
@@ -28,7 +29,8 @@
       "distribution": "internal",
       "node": "22.22.2",
       "env": {
-        "APP_VARIANT": "child"
+        "APP_VARIANT": "child",
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
       },
       "android": {
         "buildType": "apk",
@@ -44,7 +46,8 @@
       "distribution": "store",
       "node": "22.22.2",
       "env": {
-        "APP_VARIANT": "parent"
+        "APP_VARIANT": "parent",
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
       },
       "android": {
         "buildType": "app-bundle",
@@ -60,7 +63,8 @@
       "distribution": "store",
       "node": "22.22.2",
       "env": {
-        "APP_VARIANT": "child"
+        "APP_VARIANT": "child",
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
       },
       "android": {
         "buildType": "app-bundle",

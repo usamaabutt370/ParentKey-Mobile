@@ -18,7 +18,7 @@ ParentKey ships as two iOS apps, matching Android flavors.
 ```bash
 yarn ios:parent          # apply parent IDs + run
 yarn ios:child           # apply child IDs + run
-yarn prebuild:ios:child  # regenerate native child project (needed for Screen Time extension targets)
+yarn ios:prebuild:child  # regenerate native child project (needed for Screen Time extension targets)
 yarn build:ios:parent
 yarn build:ios:child
 yarn credentials:ios:parent

@@ -349,10 +349,10 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.parentkey.parent;
-				PRODUCT_NAME = ParentKey;
+				PRODUCT_BUNDLE_IDENTIFIER = com.parentkey.child;
+				PRODUCT_NAME = ParentKeyChild;
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				REACT_NATIVE_DEVICE_ACTIVITY_APP_GROUP = group.com.parentkey.parent;
+				REACT_NATIVE_DEVICE_ACTIVITY_APP_GROUP = group.com.parentkey.child;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -385,10 +385,10 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.parentkey.parent;
-				PRODUCT_NAME = ParentKey;
+				PRODUCT_BUNDLE_IDENTIFIER = com.parentkey.child;
+				PRODUCT_NAME = ParentKeyChild;
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				REACT_NATIVE_DEVICE_ACTIVITY_APP_GROUP = group.com.parentkey.parent;
+				REACT_NATIVE_DEVICE_ACTIVITY_APP_GROUP = group.com.parentkey.child;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
