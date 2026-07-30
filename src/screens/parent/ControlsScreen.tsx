@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthButton, ScreenLayout, useScreenStyles } from '../../components';
 import { ActiveBlockRuleCard, SectionHeader } from '../../components/parent';
@@ -59,8 +59,9 @@ export function ParentControlsScreen({ navigation }: Props) {
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>No active block rules</Text>
             <Text style={styles.emptyBody}>
-              Block apps for a child and they will appear here. Your child must
-              be signed in on their Android device for rules to apply.
+              {Platform.OS === 'ios'
+                ? 'Block apps from here, then finish setup on the child\'s iPhone with Screen Time. iOS cannot sync an installed-app list to the parent app.'
+                : 'Block apps for a child and they will appear here. Your child must be signed in on their Android device for rules to apply.'}
             </Text>
           </View>
         ) : (
@@ -91,7 +92,9 @@ function createStyles(colors: ColorPalette) {
       gap: spacing.xl,
     },
     actions: {
+      alignSelf: 'stretch',
       gap: spacing.sm,
+      width: '100%',
     },
     section: {
       gap: spacing.md,

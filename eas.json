@@ -12,31 +12,42 @@
       "distribution": "internal",
       "node": "22.22.2",
       "env": {
-        "APP_VARIANT": "parent"
+        "APP_VARIANT": "parent",
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
       },
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleParentRelease",
         "applicationArchivePath": "android/app/build/outputs/apk/parent/release/*.apk"
+      },
+      "ios": {
+        "simulator": false,
+        "resourceClass": "m-medium"
       }
     },
     "preview-child": {
       "distribution": "internal",
       "node": "22.22.2",
       "env": {
-        "APP_VARIANT": "child"
+        "APP_VARIANT": "child",
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
       },
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleChildRelease",
         "applicationArchivePath": "android/app/build/outputs/apk/child/release/*.apk"
+      },
+      "ios": {
+        "simulator": false,
+        "resourceClass": "m-medium"
       }
     },
     "production-parent": {
       "distribution": "store",
       "node": "22.22.2",
       "env": {
-        "APP_VARIANT": "parent"
+        "APP_VARIANT": "parent",
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
       },
       "android": {
         "buildType": "app-bundle",
@@ -52,12 +63,17 @@
       "distribution": "store",
       "node": "22.22.2",
       "env": {
-        "APP_VARIANT": "child"
+        "APP_VARIANT": "child",
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
       },
       "android": {
         "buildType": "app-bundle",
         "gradleCommand": ":app:bundleChildRelease",
         "applicationArchivePath": "android/app/build/outputs/bundle/childRelease/*.aab"
+      },
+      "ios": {
+        "simulator": false,
+        "resourceClass": "m-medium"
       }
     },
     "production-parent-verify": {
@@ -81,11 +97,17 @@
     "production-parent": {
       "android": {
         "applicationId": "com.parentkey.parent"
+      },
+      "ios": {
+        "bundleIdentifier": "com.parentkey.parent"
       }
     },
     "production-child": {
       "android": {
         "applicationId": "com.parentkey.child"
+      },
+      "ios": {
+        "bundleIdentifier": "com.parentkey.child"
       }
     }
   }

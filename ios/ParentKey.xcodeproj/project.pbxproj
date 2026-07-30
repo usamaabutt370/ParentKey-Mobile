@@ -13,13 +13,15 @@
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		A1B2C3D42E00000100000001 /* InstalledApps.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D32E00000100000001 /* InstalledApps.swift */; };
 		A1B2C3D62E00000100000002 /* InstalledApps.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D52E00000100000002 /* InstalledApps.m */; };
+		A1B2C3D82E00000100000003 /* AppInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D72E00000100000003 /* AppInfo.swift */; };
+		A1B2C3DA2E00000100000004 /* AppInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D92E00000100000004 /* AppInfo.m */; };
 		A9F5DA8B5168ACA19B117B7C /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005657AC233EBE6EBE4E900E /* ExpoModulesProvider.swift */; };
 		DD4B2314BB3E8491507CB48C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		005657AC233EBE6EBE4E900E /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-ParentKey/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		13B07F961A680F5B00A75B9A /* ParentKey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ParentKey.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07F961A680F5B00A75B9A /* ParentKeyChild.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ParentKeyChild.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = ParentKey/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = ParentKey/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = ParentKey/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -30,6 +32,8 @@
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = ParentKey/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		A1B2C3D32E00000100000001 /* InstalledApps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InstalledApps.swift; path = ParentKey/InstalledApps.swift; sourceTree = "<group>"; };
 		A1B2C3D52E00000100000002 /* InstalledApps.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = InstalledApps.m; path = ParentKey/InstalledApps.m; sourceTree = "<group>"; };
+		A1B2C3D72E00000100000003 /* AppInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppInfo.swift; path = ParentKey/AppInfo.swift; sourceTree = "<group>"; };
+		A1B2C3D92E00000100000004 /* AppInfo.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = AppInfo.m; path = ParentKey/AppInfo.m; sourceTree = "<group>"; };
 		E1F2A3B41A68108700A75B9A /* ParentKey.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = ParentKey.entitlements; path = ParentKey/ParentKey.entitlements; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -51,6 +55,8 @@
 			children = (
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
+				A1B2C3D72E00000100000003 /* AppInfo.swift */,
+				A1B2C3D92E00000100000004 /* AppInfo.m */,
 				A1B2C3D32E00000100000001 /* InstalledApps.swift */,
 				A1B2C3D52E00000100000002 /* InstalledApps.m */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
@@ -103,7 +109,7 @@
 		83CBBA001A601CBA00E9B192 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				13B07F961A680F5B00A75B9A /* ParentKey.app */,
+				13B07F961A680F5B00A75B9A /* ParentKeyChild.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -147,7 +153,7 @@
 			);
 			name = ParentKey;
 			productName = ParentKey;
-			productReference = 13B07F961A680F5B00A75B9A /* ParentKey.app */;
+			productReference = 13B07F961A680F5B00A75B9A /* ParentKeyChild.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -209,7 +215,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"\\\"$WITH_ENVIRONMENT\\\" \\\"$REACT_NATIVE_XCODE\\\"\"\n";
+			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n# Device Debug loads JS from Metro. Skip embedding a bundle so Xcode does not\n# hit Metro's \"Unexpected module with full source map\" PhaseScriptExecution failure.\nif [ \"$CONFIGURATION\" = \"Debug\" ] && [ \"$PLATFORM_NAME\" = \"iphoneos\" ]; then\n  export SKIP_BUNDLING=1\nfi\n\n/bin/sh -c \"\\\"$WITH_ENVIRONMENT\\\" \\\"$REACT_NATIVE_XCODE\\\"\"\n";
 		};
 		00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -219,9 +225,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-ParentKey/Pods-ParentKey-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-ParentKey/Pods-ParentKey-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -258,9 +268,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-ParentKey/Pods-ParentKey-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-ParentKey/Pods-ParentKey-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -299,6 +313,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
+				A1B2C3D82E00000100000003 /* AppInfo.swift in Sources */,
+				A1B2C3DA2E00000100000004 /* AppInfo.m in Sources */,
 				A1B2C3D42E00000100000001 /* InstalledApps.swift in Sources */,
 				A1B2C3D62E00000100000002 /* InstalledApps.m in Sources */,
 				A9F5DA8B5168ACA19B117B7C /* ExpoModulesProvider.swift in Sources */,
@@ -315,7 +331,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ParentKey/ParentKey.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = M954UVKM42;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = ParentKey/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
@@ -330,9 +349,10 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = ParentKey;
-				REACT_NATIVE_DEVICE_ACTIVITY_APP_GROUP = group.org.reactjs.native.example.ParentKey;
+				PRODUCT_BUNDLE_IDENTIFIER = com.parentkey.child;
+				PRODUCT_NAME = ParentKeyChild;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				REACT_NATIVE_DEVICE_ACTIVITY_APP_GROUP = group.com.parentkey.child;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -348,7 +368,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ParentKey/ParentKey.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = M954UVKM42;
 				INFOPLIST_FILE = ParentKey/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -362,9 +385,10 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = ParentKey;
-				REACT_NATIVE_DEVICE_ACTIVITY_APP_GROUP = group.org.reactjs.native.example.ParentKey;
+				PRODUCT_BUNDLE_IDENTIFIER = com.parentkey.child;
+				PRODUCT_NAME = ParentKeyChild;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				REACT_NATIVE_DEVICE_ACTIVITY_APP_GROUP = group.com.parentkey.child;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

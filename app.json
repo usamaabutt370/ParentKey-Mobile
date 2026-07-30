@@ -3,8 +3,9 @@
   "displayName": "ParentKey",
   "icon": "./assets/appicon/parent-icon-1024.png",
   "ios": {
-    "bundleIdentifier": "org.reactjs.native.example.ParentKey",
-    "icon": "./assets/appicon/parent-icon-1024.png"
+    "bundleIdentifier": "com.parentkey.parent",
+    "icon": "./assets/appicon/parent-icon-1024.png",
+    "supportsTablet": true
   },
   "android": {
     "package": "com.parentkey.parent",
@@ -25,15 +26,9 @@
   },
   "plugins": [
     [
-      "react-native-device-activity",
-      {
-        "appGroup": "group.org.reactjs.native.example.ParentKey"
-      }
-    ],
-    [
       "expo-camera",
       {
-        "cameraPermission": "ParentKey Child needs camera access to scan the QR code from your parent's phone."
+        "cameraPermission": "ParentKey needs camera access for pairing-related features."
       }
     ],
     [
@@ -45,48 +40,11 @@
       }
     ],
     "./plugins/withAndroidFlavors.js",
+    "./plugins/withIosAppVariant.js",
     "expo-splash-screen"
   ],
   "extra": {
     "eas": {
-      "build": {
-        "experimental": {
-          "ios": {
-            "appExtensions": [
-              {
-                "bundleIdentifier": "org.reactjs.native.example.ParentKey.ShieldConfiguration",
-                "targetName": "ShieldConfiguration",
-                "entitlements": {
-                  "com.apple.developer.family-controls": true,
-                  "com.apple.security.application-groups": [
-                    "group.org.reactjs.native.example.ParentKey"
-                  ]
-                }
-              },
-              {
-                "bundleIdentifier": "org.reactjs.native.example.ParentKey.ShieldAction",
-                "targetName": "ShieldAction",
-                "entitlements": {
-                  "com.apple.developer.family-controls": true,
-                  "com.apple.security.application-groups": [
-                    "group.org.reactjs.native.example.ParentKey"
-                  ]
-                }
-              },
-              {
-                "bundleIdentifier": "org.reactjs.native.example.ParentKey.ActivityMonitorExtension",
-                "targetName": "ActivityMonitorExtension",
-                "entitlements": {
-                  "com.apple.developer.family-controls": true,
-                  "com.apple.security.application-groups": [
-                    "group.org.reactjs.native.example.ParentKey"
-                  ]
-                }
-              }
-            ]
-          }
-        }
-      },
       "projectId": "3d49ef42-320e-4b5f-a9ef-4761b1abcebc"
     }
   },

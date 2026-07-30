@@ -4252,14 +4252,14 @@ expo-asset@~56.0.21:
     "@expo/image-utils" "^0.10.4"
     expo-constants "~56.0.22"
 
-expo-camera@^57.0.1:
-  version "57.0.3"
-  resolved "https://registry.yarnpkg.com/expo-camera/-/expo-camera-57.0.3.tgz#7a7b526c642dfdd43607feca02ee3736ec5f9546"
-  integrity sha512-Q+3aZ63eQCkdB6/FZrO/lfacNAg/j8JCeKQL2nBdf6vBeOo1Y2PKYx1/vK+U5LaRnIo/0tMGmCOzZ1JGhTeMIw==
+expo-camera@~56.0.8:
+  version "56.0.8"
+  resolved "https://registry.yarnpkg.com/expo-camera/-/expo-camera-56.0.8.tgz#a7803265516a302a33d92b5bdea06bbe3b88380e"
+  integrity sha512-UDOpUUMisFRmCv1XQV1MJCKGAH2CsIC1Rs6P9Bbc6JLVmbxEKAd5dK68y6cScOdWURxVfJ0PRcjYnSuc8ayyIQ==
   dependencies:
     barcode-detector "^3.0.0"
 
-expo-constants@~56.0.22:
+expo-constants@~56.0.18, expo-constants@~56.0.22:
   version "56.0.22"
   resolved "https://registry.yarnpkg.com/expo-constants/-/expo-constants-56.0.22.tgz#df0c7bb02574801ea034d832c3baf5e862e50e19"
   integrity sha512-XNRssTBSGDR3gsaYhhp513WdpPsLi89wgfYT0wLsCtMY8vXAgXR4jNlaYGXFCnvNVbx9gEDSBHOSntqRK1i8Lw==
@@ -4278,17 +4278,17 @@ expo-font@~56.0.7:
   dependencies:
     fontfaceobserver "^2.1.0"
 
-expo-image-loader@~57.0.1:
-  version "57.0.1"
-  resolved "https://registry.yarnpkg.com/expo-image-loader/-/expo-image-loader-57.0.1.tgz#b031dc3e62ac09004f3e436d7081487236791f53"
-  integrity sha512-uhrZKLT/cTl2mXyR28kPpVkS5O+PK9N1QA/07IFM4f5T4g0lTW1JHT3NEWwEEsGFldPmVX4j7LwUVVZxE+woug==
+expo-image-loader@~56.0.3:
+  version "56.0.3"
+  resolved "https://registry.yarnpkg.com/expo-image-loader/-/expo-image-loader-56.0.3.tgz#665112665e78d0fd9629f6160e2ca419d7f0c5c6"
+  integrity sha512-JgUo4fUeU1ZC+z8iBFj8v7yoGQnZrLbOVPyNE+DWVrld55F2F6R1ck+rmdm/8TNWLz1LhNQfD7c3XYP1ZikxXA==
 
-expo-image-picker@^57.0.2:
-  version "57.0.6"
-  resolved "https://registry.yarnpkg.com/expo-image-picker/-/expo-image-picker-57.0.6.tgz#f6a71acb4fe668d7723ab162271064825cf356c5"
-  integrity sha512-6Of7SzyFVC+WFuFxhD4+nRTQ9joqldPhbiVWRsumg4ybttKmY8GxrnXAUSIDfa9DSk9PhgIAy2C1c5y1+CnU3g==
+expo-image-picker@~56.0.22:
+  version "56.0.22"
+  resolved "https://registry.yarnpkg.com/expo-image-picker/-/expo-image-picker-56.0.22.tgz#56055795859a6762dd3bb0722bacdf827b1cb094"
+  integrity sha512-4QrLk07a+WqCSZkmk2tbwFa57HgPYZisM2/n+OQ5kS3ty923x9dfxFXSdh17zF1lRCHhpsXj8H24+0IjcgVqIQ==
   dependencies:
-    expo-image-loader "~57.0.1"
+    expo-image-loader "~56.0.3"
 
 expo-keep-awake@~56.0.3:
   version "56.0.3"

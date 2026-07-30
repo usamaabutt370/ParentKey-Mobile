@@ -1,13 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  AppState,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthButton, ScreenLayout } from '../../components';
 import { ChildSetupStepLayout } from '../../components/child/ChildSetupStepLayout';
 import { CHILD_SETUP_TOTAL_STEPS } from '../../constants/childSetup';
+import { useAuth } from '../../context/AuthContext';
 import {
   getChildPermissionSteps,
   type ChildPermissionKey,
 } from '../../lib/childPermissions';
+import { markChildSetupComplete } from '../../lib/childSetup';
 import type { ChildStackParamList } from '../../navigation/types';
 import { useTheme } from '../../context/ThemeContext';
 import type { ColorPalette } from '../../theme/colors';
@@ -31,6 +40,7 @@ function findFirstUngrantedIndex(
 
 export function ChildPermissionsScreen({ navigation }: Props) {
   const { colors } = useTheme();
+  const { session } = useAuth();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const steps = useMemo(() => getChildPermissionSteps(), []);
   const [stepIndex, setStepIndex] = useState(0);
@@ -50,6 +60,18 @@ export function ChildPermissionsScreen({ navigation }: Props) {
 
   const step = steps[stepIndex];
   const currentGranted = step ? grantedFlags[step.key] : false;
+
+  const finishSetupWithoutAndroidSync = useCallback(async () => {
+    const childId = session?.user.id;
+    if (childId) {
+      await markChildSetupComplete(childId);
+    }
+
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'ChildHome' }],
+    });
+  }, [navigation, session?.user.id]);
 
   const refreshStatuses = useCallback(async () => {
     const entries = await Promise.all(
@@ -71,6 +93,12 @@ export function ChildPermissionsScreen({ navigation }: Props) {
       if (nextIndex === -1) {
         awaitingPermissionRef.current = false;
         setContinuing(false);
+        // Android-only inventory sync. On iOS there is nothing to sync.
+        if (Platform.OS === 'ios' || steps.length === 0) {
+          void finishSetupWithoutAndroidSync();
+          return;
+        }
+
         navigation.replace('ChildDeviceSync');
         return;
       }
@@ -82,7 +110,7 @@ export function ChildPermissionsScreen({ navigation }: Props) {
 
       setStepIndex(nextIndex);
     },
-    [navigation, stepIndex, steps],
+    [finishSetupWithoutAndroidSync, navigation, stepIndex, steps],
   );
 
   useEffect(() => {

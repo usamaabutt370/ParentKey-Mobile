@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { ScreenLayout, useScreenStyles } from '../../components';
 import {
   ChildActivityCard,
@@ -13,6 +13,8 @@ import { useParentActivityDashboard } from '../../hooks/useParentActivityDashboa
 import { useTheme } from '../../context/ThemeContext';
 import type { ColorPalette } from '../../theme/colors';
 import { spacing, typography } from '../../theme';
+
+const IS_IOS = Platform.OS === 'ios';
 
 export function ParentReportsScreen() {
   const screenStyles = useScreenStyles();
@@ -37,7 +39,9 @@ export function ParentReportsScreen() {
       <View style={screenStyles.header}>
         <Text style={screenStyles.title}>Reports</Text>
         <Text style={screenStyles.subtitle}>
-          Live activity synced from your children&apos;s Android devices
+          {IS_IOS
+            ? 'Activity insights for your linked children'
+            : "Live activity synced from your children's Android devices"}
         </Text>
       </View>
 
@@ -76,8 +80,9 @@ export function ParentReportsScreen() {
             <SectionHeader title="Weekly overview" />
             {weeklyUsage.every(day => day.hours === 0) ? (
               <Text style={styles.emptyText}>
-                No usage synced yet. Enable Usage access on the child device and
-                tap Sync apps and rules.
+                {IS_IOS
+                  ? 'App usage sync from child iPhones is not available. Use Screen Time on the child device for limits and blocking.'
+                  : 'No usage synced yet. Enable Usage access on the child device and tap Sync apps and rules.'}
               </Text>
             ) : (
               <WeeklyUsageChart data={weeklyUsage} />

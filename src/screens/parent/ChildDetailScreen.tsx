@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   StyleSheet,
   Switch,
   Text,
@@ -366,11 +367,23 @@ export function ChildDetailScreen({ navigation, route }: Props) {
                 {topApps.length > 0 ? (
                   <TopAppsReport apps={topApps} />
                 ) : (
-                  <InfoTipCard message="No app usage synced for today. Ask your child to enable Usage access and tap Sync apps and rules." />
+                  <InfoTipCard
+                    message={
+                      Platform.OS === 'ios'
+                        ? 'App usage sync is not available on iOS. Block or limit apps on the child\'s iPhone with Screen Time.'
+                        : 'No app usage synced for today. Ask your child to enable Usage access and tap Sync apps and rules.'
+                    }
+                  />
                 )}
               </>
             ) : (
-              <InfoTipCard message="Activity appears after the child device syncs app usage." />
+              <InfoTipCard
+                message={
+                  Platform.OS === 'ios'
+                    ? 'On iOS, app blocking and limits are set up on the child\'s iPhone with Screen Time.'
+                    : 'Activity appears after the child device syncs app usage.'
+                }
+              />
             )}
           </View>
 

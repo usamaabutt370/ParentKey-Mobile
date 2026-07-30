@@ -81,11 +81,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    alignItems: 'stretch',
     flexGrow: 1,
     gap: spacing.xl,
     paddingBottom: spacing.md,
   },
   content: {
+    alignItems: 'stretch',
     flex: 1,
     gap: spacing.md,
   },

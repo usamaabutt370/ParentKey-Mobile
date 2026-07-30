@@ -1,4 +1,11 @@
-export const IOS_APP_GROUP = 'group.org.reactjs.native.example.ParentKey';
+import { APP_VARIANT, IOS_CONFIGURED_APP_GROUP } from '../lib/appInfo';
+
+const DEFAULT_IOS_APP_GROUP = 'group.com.parentkey.parent';
+const CHILD_IOS_APP_GROUP = 'group.com.parentkey.child';
+
+export const IOS_APP_GROUP =
+  IOS_CONFIGURED_APP_GROUP ??
+  (APP_VARIANT === 'child' ? CHILD_IOS_APP_GROUP : DEFAULT_IOS_APP_GROUP);
 
 export const IOS_SCREEN_TIME_SELECTION_IDS = {
   block: 'parentkey-blocked-apps',
