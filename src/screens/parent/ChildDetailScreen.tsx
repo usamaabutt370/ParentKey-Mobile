@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
+import QRCode from 'react-native-qrcode-svg';
 import {
   BlockedAppRow,
   ChildActivityCard,
@@ -20,8 +21,10 @@ import {
 } from '../../components/parent';
 import { AuthButton, ScreenLayout } from '../../components';
 import { getChildAvatar } from '../../constants/childAvatars';
+import { buildPairingQrValue } from '../../constants/pairing';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useExpiryCountdown } from '../../hooks/useExpiryCountdown';
 import {
   fetchChildBlockRules,
   fetchChildInstalledApps,
@@ -44,7 +47,13 @@ import {
   mergeInstalledAppIcons,
   type AppIconData,
 } from '../../lib/installedApps';
+import {
+  createReconnectSession,
+  subscribeToPairingSession,
+  type PairingSession,
+} from '../../lib/pairing';
 import { buildChildActivitySummaries, formatTimeAgo } from '../../lib/parentActivity';
+import { supabase } from '../../lib/supabase';
 import type { UsageTopApp } from '../../types/appUsage';
 import type { ChildActivitySummary } from '../../types/parentActivity';
 import type { ChildrenStackParamList } from '../../navigation/types';
@@ -87,6 +96,11 @@ export function ChildDetailScreen({ navigation, route }: Props) {
   );
   const [deleting, setDeleting] = useState(false);
   const [updatingUninstall, setUpdatingUninstall] = useState(false);
+  const [reconnectSession, setReconnectSession] =
+    useState<PairingSession | null>(null);
+  const [reconnectLoading, setReconnectLoading] = useState(false);
+  const [reconnectError, setReconnectError] = useState<string | null>(null);
+  const reconnectExpiryLabel = useExpiryCountdown(reconnectSession?.expiresAt);
 
   const loadChild = useCallback(async () => {
     const parentId = session?.user.id;
@@ -163,6 +177,63 @@ export function ChildDetailScreen({ navigation, route }: Props) {
       void loadChild();
     }, [loadChild]),
   );
+
+  const startReconnect = useCallback(async () => {
+    setReconnectLoading(true);
+    setReconnectError(null);
+
+    const result = await createReconnectSession(childId);
+    setReconnectLoading(false);
+
+    if (!result.ok) {
+      setReconnectSession(null);
+      setReconnectError(result.message);
+      return;
+    }
+
+    setReconnectSession(result.session);
+  }, [childId]);
+
+  useEffect(() => {
+    if (!reconnectSession) {
+      return;
+    }
+
+    const handleClaimed = () => {
+      setReconnectSession(null);
+      void loadChild();
+      Alert.alert(
+        'Device reconnected',
+        'This device is linked to the same child account again.',
+      );
+    };
+
+    const unsubscribe = subscribeToPairingSession(
+      reconnectSession.sessionId,
+      row => {
+        if (row.status === 'claimed') {
+          handleClaimed();
+        }
+      },
+    );
+
+    const pollInterval = setInterval(async () => {
+      const { data } = await supabase
+        .from('pairing_sessions')
+        .select('status')
+        .eq('id', reconnectSession.sessionId)
+        .maybeSingle();
+
+      if (data?.status === 'claimed') {
+        handleClaimed();
+      }
+    }, 3000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(pollInterval);
+    };
+  }, [loadChild, reconnectSession]);
 
   const handleUnblock = (rule: AppBlockRule) => {
     const parentId = session?.user.id;
@@ -417,6 +488,44 @@ export function ChildDetailScreen({ navigation, route }: Props) {
           </View>
 
           <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Reconnect device</Text>
+            <InfoTipCard message="If this child's phone went back to the QR screen, generate a reconnect code. It re-links the same account instead of creating a duplicate child." />
+
+            {reconnectSession ? (
+              <>
+                <View style={styles.qrCard}>
+                  <QRCode
+                    backgroundColor={colors.background.primary}
+                    color={colors.text.primary}
+                    size={200}
+                    value={buildPairingQrValue(reconnectSession.token)}
+                  />
+                </View>
+                <Text style={styles.reconnectStatus}>
+                  Waiting for {displayName}&apos;s device to scan this code…
+                </Text>
+                <Text style={styles.syncMeta}>{reconnectExpiryLabel}</Text>
+                <AuthButton
+                  onPress={() => setReconnectSession(null)}
+                  title="Hide code"
+                  variant="secondary"
+                />
+              </>
+            ) : (
+              <AuthButton
+                loading={reconnectLoading}
+                onPress={() => void startReconnect()}
+                title="Generate reconnect code"
+                variant="secondary"
+              />
+            )}
+
+            {reconnectError ? (
+              <Text style={styles.errorText}>{reconnectError}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Blocked apps</Text>
             {blockRules.length === 0 ? (
               <InfoTipCard message="No apps are blocked for this child yet. Block apps from Controls or tap the button below." />
@@ -599,6 +708,21 @@ function createStyles(colors: ColorPalette) {
     syncMeta: {
       ...typography.caption,
       color: colors.text.secondary,
+    },
+    qrCard: {
+      alignItems: 'center',
+      alignSelf: 'center',
+      backgroundColor: colors.background.primary,
+      borderColor: colors.border.default,
+      borderRadius: radii.lg,
+      borderWidth: 1,
+      padding: spacing.lg,
+    },
+    reconnectStatus: {
+      ...typography.label,
+      color: colors.text.primary,
+      fontSize: 16,
+      textAlign: 'center',
     },
     blockedList: {
       gap: spacing.sm,

@@ -1,21 +1,23 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import {
+  ChildPickerSheet,
+  ChildSelectorChip,
   RecentAlertsList,
   SectionHeader,
   StatCard,
-  TopAppsReport,
-  WeeklyUsageChart,
+  UsagePeriodCarousel,
 } from '../../components/parent';
 import { ScreenLayout, useScreenStyles } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useParentActivityDashboard } from '../../hooks/useParentActivityDashboard';
+import { getChildDisplayName } from '../../lib/children';
 import type { ParentTabParamList } from '../../navigation/types';
 import type { ColorPalette } from '../../theme/colors';
-import { radii, spacing, typography } from '../../theme';
+import { spacing, typography } from '../../theme';
 
 type HomeNavigation = BottomTabNavigationProp<ParentTabParamList, 'Home'>;
 
@@ -26,14 +28,25 @@ export function ParentHomeScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { session } = useAuth();
   const {
-    summary,
-    stats,
-    topApps,
-    weeklyUsage,
-    alerts,
+    children,
+    selectedChild,
+    selectedChildId,
+    setSelectedChildId,
+    selectedSummary: summary,
+    selectedStats: stats,
+    selectedPeriodCards,
+    selectedAlerts: alerts,
     loading: activityLoading,
   } = useParentActivityDashboard();
+  const [pickerVisible, setPickerVisible] = useState(false);
   const firstName = session?.user.user_metadata?.first_name;
+  const selectedName = selectedChild
+    ? getChildDisplayName(selectedChild)
+    : null;
+  const usageEmptyHint =
+    Platform.OS === 'ios'
+      ? 'App usage sync is not available on iOS. Use Screen Time on the child device for limits and blocking.'
+      : 'Usage data appears after the child enables Usage access and syncs.';
 
   return (
     <ScreenLayout
@@ -42,11 +55,20 @@ export function ParentHomeScreen() {
       contentStyle={styles.content}>
       <View style={screenStyles.header}>
         <Text style={screenStyles.brand}>ParentKey</Text>
+        {children.length > 0 ? (
+          <ChildSelectorChip
+            child={selectedChild}
+            disabled={activityLoading && !selectedChild}
+            onPress={() => setPickerVisible(true)}
+          />
+        ) : null}
         <Text style={[screenStyles.title, styles.greeting]}>
           {firstName ? `Hi, ${firstName}` : 'Dashboard'}
         </Text>
         <Text style={screenStyles.subtitle}>
-          Here&apos;s how your family is doing today
+          {selectedName
+            ? `Here's how ${selectedName} is doing today`
+            : "Here's how your family is doing today"}
         </Text>
       </View>
 
@@ -71,43 +93,15 @@ export function ParentHomeScreen() {
         <SectionHeader
           actionLabel="Full report"
           onActionPress={() => navigation.navigate('Reports')}
-          title="Today's usage"
+          title="Phone usage"
         />
-        <View style={styles.reportSummaryRow}>
-          <View style={styles.reportSummaryCard}>
-            <Text style={styles.reportSummaryValue}>
-              {activityLoading ? '...' : summary.todayLabel}
-            </Text>
-            <Text style={styles.reportSummaryLabel}>Today</Text>
-          </View>
-          <View style={styles.reportSummaryCard}>
-            <Text style={styles.reportSummaryValue}>
-              {activityLoading ? '...' : summary.weekLabel}
-            </Text>
-            <Text style={styles.reportSummaryLabel}>This week</Text>
-          </View>
-        </View>
-        {topApps.length > 0 ? (
-          <TopAppsReport apps={topApps} />
+        {activityLoading ? (
+          <ActivityIndicator color={colors.brand.tealLight} size="small" />
         ) : (
-          <Text style={styles.emptyUsageText}>
-            {Platform.OS === 'ios'
-              ? 'App usage sync is not available on iOS. Use Screen Time on the child device for limits and blocking.'
-              : 'Usage data appears after the child enables Usage access and syncs.'}
-          </Text>
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeader title="Weekly overview" />
-        {weeklyUsage.every(day => day.hours === 0) ? (
-          <Text style={styles.emptyUsageText}>
-            {Platform.OS === 'ios'
-              ? 'Weekly usage sync is not available for child iPhones.'
-              : 'No weekly usage synced yet.'}
-          </Text>
-        ) : (
-          <WeeklyUsageChart data={weeklyUsage} />
+          <UsagePeriodCarousel
+            cards={selectedPeriodCards}
+            emptyHint={usageEmptyHint}
+          />
         )}
       </View>
 
@@ -119,11 +113,20 @@ export function ParentHomeScreen() {
           <RecentAlertsList alerts={alerts} />
         )}
       </View>
+
+      <ChildPickerSheet
+        childrenList={children}
+        onAddChild={() => navigation.navigate('Children')}
+        onClose={() => setPickerVisible(false)}
+        onSelect={setSelectedChildId}
+        selectedChildId={selectedChildId}
+        visible={pickerVisible}
+      />
     </ScreenLayout>
   );
 }
 
-function createStyles(colors: ColorPalette) {
+function createStyles(_colors: ColorPalette) {
   return StyleSheet.create({
     content: {
       gap: spacing.xl,
@@ -137,33 +140,6 @@ function createStyles(colors: ColorPalette) {
     },
     section: {
       gap: spacing.md,
-    },
-    reportSummaryRow: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-    },
-    reportSummaryCard: {
-      backgroundColor: colors.input.background,
-      borderColor: colors.border.default,
-      borderRadius: radii.lg,
-      borderWidth: 1,
-      flex: 1,
-      gap: spacing.xs,
-      padding: spacing.md,
-    },
-    reportSummaryValue: {
-      ...typography.label,
-      color: colors.text.primary,
-      fontSize: 16,
-      fontWeight: '700',
-    },
-    reportSummaryLabel: {
-      ...typography.caption,
-      color: colors.text.secondary,
-    },
-    emptyUsageText: {
-      ...typography.body,
-      color: colors.text.secondary,
     },
   });
 }

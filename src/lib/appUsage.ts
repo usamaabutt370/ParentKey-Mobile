@@ -1,6 +1,8 @@
 import type {
   AppUsageDailyRecord,
   UsageDailyTotal,
+  UsagePeriodCard,
+  UsagePeriodChartBar,
   UsageReportSummary,
   UsageTopApp,
 } from '../types/appUsage';
@@ -76,6 +78,33 @@ export function formatUsageDuration(totalSeconds: number): string {
   return '0m';
 }
 
+/** Longer label for period cards, e.g. "2 h 15 min". */
+export function formatUsageDurationLong(totalSeconds: number): string {
+  if (totalSeconds <= 0) {
+    return '0 min';
+  }
+
+  if (totalSeconds < 60) {
+    return `${totalSeconds} sec`;
+  }
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  if (hours > 0) {
+    return `${hours} h ${minutes} min`;
+  }
+
+  return `${minutes} min`;
+}
+
+export function getLocalDateOffset(daysBack = 0): string {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() - daysBack);
+  return getLocalDateString(date);
+}
+
 function getLocalDateString(date = new Date()): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -141,11 +170,10 @@ function normalizeUsageRecords(
   trackingByDevice: Map<string, string | null>,
 ): AppUsageDailyRecord[] {
   return records.flatMap(record => {
-    const trackingStartedAt = trackingByDevice.get(record.deviceId);
-
-    if (!trackingStartedAt) {
-      return [];
-    }
+    // Prefer the device flag, but never drop rows just because it is missing —
+    // native uploads can land before that column is set/refetched.
+    const trackingStartedAt =
+      trackingByDevice.get(record.deviceId) ?? record.syncedAt ?? null;
 
     const foregroundSeconds = capUsageSecondsForDate(
       record.usageDate,
@@ -197,16 +225,6 @@ export async function syncChildAppUsage(params: {
     if (markError) {
       return { ok: false, message: markError.message };
     }
-  } else {
-    const { error: deleteTodayError } = await supabase
-      .from('child_app_usage_daily')
-      .delete()
-      .eq('device_id', params.deviceId)
-      .eq('usage_date', today);
-
-    if (deleteTodayError) {
-      return { ok: false, message: deleteTodayError.message };
-    }
   }
 
   const validRecords = filterUsageRecords(params.records)
@@ -235,7 +253,11 @@ export async function syncChildAppUsage(params: {
     synced_at: syncedAt,
   }));
 
-  const { error } = await supabase.from('child_app_usage_daily').insert(rows);
+  // Native background sync writes the same rows, so replace by key rather than
+  // delete-then-insert, which raced with it and hit the unique constraint.
+  const { error } = await supabase
+    .from('child_app_usage_daily')
+    .upsert(rows, { onConflict: 'device_id,package_name,usage_date' });
 
   if (error) {
     return { ok: false, message: error.message };
@@ -397,6 +419,15 @@ export function buildTopAppsForDate(
   usageDate: string,
   limit = 5,
 ): UsageTopApp[] {
+  return buildTopAppsForDates(records, [usageDate], limit);
+}
+
+export function buildTopAppsForDates(
+  records: AppUsageDailyRecord[],
+  usageDates: string[],
+  limit = 5,
+): UsageTopApp[] {
+  const dateSet = new Set(usageDates);
   const filteredRecords = filterUsageRecords(records);
   const totalsByPackage = new Map<
     string,
@@ -404,7 +435,7 @@ export function buildTopAppsForDate(
   >();
 
   for (const record of filteredRecords) {
-    if (record.usageDate !== usageDate) {
+    if (!dateSet.has(record.usageDate)) {
       continue;
     }
 
@@ -443,6 +474,111 @@ export function buildTopAppsForDate(
         ? Math.round((value.foregroundSeconds / maxSeconds) * 100)
         : 0,
   }));
+}
+
+function sumSecondsForDates(
+  records: AppUsageDailyRecord[],
+  usageDates: string[],
+): number {
+  const dateSet = new Set(usageDates);
+  let total = 0;
+
+  for (const record of filterUsageRecords(records)) {
+    if (!dateSet.has(record.usageDate)) {
+      continue;
+    }
+    total += record.foregroundSeconds;
+  }
+
+  return total;
+}
+
+function buildAppChartBars(apps: UsageTopApp[]): UsagePeriodChartBar[] {
+  return apps.slice(0, 6).map(app => ({
+    key: app.packageName,
+    label: app.name.slice(0, 3).toUpperCase(),
+    seconds: app.foregroundSeconds,
+    display: app.time,
+  }));
+}
+
+const PERIOD_CARD_PREVIEW_LIMIT = 3;
+/** High enough that "more apps" can reveal the full synced set. */
+const PERIOD_CARD_APP_LIMIT = 200;
+
+function buildDayPeriodCard(params: {
+  id: 'today' | 'yesterday';
+  title: string;
+  usageDate: string;
+  records: AppUsageDailyRecord[];
+  emptyMessage: string;
+}): UsagePeriodCard {
+  const apps = buildTopAppsForDates(
+    params.records,
+    [params.usageDate],
+    PERIOD_CARD_APP_LIMIT,
+  );
+  const totalSeconds = sumSecondsForDates(params.records, [params.usageDate]);
+
+  return {
+    id: params.id,
+    title: params.title,
+    totalSeconds,
+    totalLabel: formatUsageDurationLong(totalSeconds),
+    apps,
+    moreAppsCount: Math.max(0, apps.length - PERIOD_CARD_PREVIEW_LIMIT),
+    chartBars: buildAppChartBars(apps),
+    emptyMessage: params.emptyMessage,
+  };
+}
+
+export function buildUsagePeriodCards(
+  records: AppUsageDailyRecord[],
+): UsagePeriodCard[] {
+  const today = getLocalDateOffset(0);
+  const yesterday = getLocalDateOffset(1);
+  const weekDates = getWeekDates();
+  const weekApps = buildTopAppsForDates(
+    records,
+    weekDates,
+    PERIOD_CARD_APP_LIMIT,
+  );
+  const weekSeconds = sumSecondsForDates(records, weekDates);
+  const weeklyTotals = buildWeeklyUsageTotals(records);
+
+  const weekCard: UsagePeriodCard = {
+    id: 'week',
+    title: 'This week on the phone',
+    totalSeconds: weekSeconds,
+    totalLabel: formatUsageDurationLong(weekSeconds),
+    apps: weekApps,
+    moreAppsCount: Math.max(0, weekApps.length - PERIOD_CARD_PREVIEW_LIMIT),
+    chartBars: weeklyTotals.map(day => ({
+      key: day.usageDate,
+      label: day.day,
+      seconds: Math.round(day.hours * 3600),
+      display: day.label,
+    })),
+    emptyMessage: 'No weekly usage synced yet.',
+  };
+
+  return [
+    buildDayPeriodCard({
+      id: 'today',
+      title: 'Today on the phone',
+      usageDate: today,
+      records,
+      emptyMessage: 'No usage recorded for today yet.',
+    }),
+    buildDayPeriodCard({
+      id: 'yesterday',
+      title: 'Yesterday on the phone',
+      usageDate: yesterday,
+      records,
+      emptyMessage: 'No usage recorded for yesterday.',
+    }),
+    weekCard,
+  ];
 }
 
 export function buildWeeklyUsageTotals(

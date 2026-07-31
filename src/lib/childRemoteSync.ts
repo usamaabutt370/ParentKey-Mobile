@@ -12,12 +12,21 @@ type AppBlockingSyncModule = {
     refreshToken: string,
     childId: string,
     deviceId: string | null,
+    usageTrackingStartedAt?: string | null,
   ) => Promise<boolean>;
   clearSyncCredentials: () => Promise<boolean>;
   startBackgroundSync: () => Promise<boolean>;
   stopBackgroundSync: () => Promise<boolean>;
   runBackgroundSyncNow: () => Promise<number>;
+  getSyncCredentials?: () => Promise<NativeSyncCredentials | null>;
   getFcmToken?: () => Promise<string | null>;
+};
+
+export type NativeSyncCredentials = {
+  accessToken: string;
+  refreshToken: string;
+  childId: string;
+  deviceId: string | null;
 };
 
 const appBlocking = NativeModules.AppBlocking as AppBlockingSyncModule | undefined;
@@ -40,6 +49,7 @@ export async function enableChildBackgroundSync(params: {
   accessToken: string;
   refreshToken: string;
   deviceId?: string | null;
+  usageTrackingStartedAt?: string | null;
 }): Promise<void> {
   if (!canUseNativeSync() || !appBlocking) {
     return;
@@ -52,6 +62,7 @@ export async function enableChildBackgroundSync(params: {
     params.refreshToken,
     params.childId,
     params.deviceId ?? null,
+    params.usageTrackingStartedAt ?? null,
   );
 
   if (Platform.OS === 'android' && Platform.Version >= 33) {
@@ -93,6 +104,48 @@ export async function disableChildBackgroundSync(): Promise<void> {
 
   await appBlocking.stopBackgroundSync();
   await appBlocking.clearSyncCredentials();
+}
+
+/**
+ * Push the current tokens down to native without restarting the sync services.
+ * Used on TOKEN_REFRESHED so native keeps working from the same rotated token
+ * the JS session holds.
+ */
+export async function syncNativeSessionTokens(params: {
+  childId: string;
+  accessToken: string;
+  refreshToken: string;
+}): Promise<void> {
+  if (!canUseNativeSync() || !appBlocking) {
+    return;
+  }
+
+  await appBlocking.persistSyncCredentials(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
+    params.accessToken,
+    params.refreshToken,
+    params.childId,
+    null,
+    null,
+  );
+}
+
+/** Tokens native background sync kept fresh while the RN UI was not running. */
+export async function readNativeSyncCredentials(): Promise<NativeSyncCredentials | null> {
+  if (!canUseNativeSync() || !appBlocking?.getSyncCredentials) {
+    return null;
+  }
+
+  try {
+    const credentials = await appBlocking.getSyncCredentials();
+    if (!credentials?.accessToken || !credentials.refreshToken) {
+      return null;
+    }
+    return credentials;
+  } catch {
+    return null;
+  }
 }
 
 export async function refreshChildBackgroundSyncFromSession(): Promise<void> {

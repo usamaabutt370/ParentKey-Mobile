@@ -11,9 +11,13 @@ export type PairingSession = {
   expiresAt: string;
 };
 
+export type PairingMode = 'pair' | 'reconnect';
+
 export type ValidatedPairingToken = {
   sessionId: string;
   parentId: string;
+  mode: PairingMode;
+  targetChildId: string | null;
 };
 
 type PairingSessionRow = {
@@ -48,6 +52,13 @@ async function resolveDeviceKey(): Promise<string> {
 }
 
 function mapPairingRpcError(message: string): string {
+  if (
+    message.includes('create_reconnect_session') ||
+    message.includes('redeem_reconnect_token')
+  ) {
+    return 'Device reconnect is not set up on the server yet. Apply migration 019_reconnect_child_device.sql in the Supabase SQL Editor, then try again.';
+  }
+
   if (
     message.includes('create_pairing_session') ||
     message.includes('validate_pairing_token') ||
@@ -85,6 +96,42 @@ export async function createPairingSession(): Promise<
     typeof row.expires_at !== 'string'
   ) {
     return { ok: false, message: 'Could not start pairing. Please try again.' };
+  }
+
+  return {
+    ok: true,
+    session: {
+      sessionId: row.session_id,
+      token: row.token,
+      expiresAt: row.expires_at,
+    },
+  };
+}
+
+/**
+ * QR that re-attaches a device to an existing child instead of creating a new
+ * account. Use when a child device fell back to the pairing screen.
+ */
+export async function createReconnectSession(
+  childId: string,
+): Promise<{ ok: true; session: PairingSession } | { ok: false; message: string }> {
+  const { data, error } = await supabase.rpc('create_reconnect_session', {
+    p_child_id: childId,
+  });
+
+  if (error) {
+    return { ok: false, message: mapPairingRpcError(error.message) };
+  }
+
+  const row = readRpcObject(data);
+
+  if (
+    !row ||
+    typeof row.session_id !== 'string' ||
+    typeof row.token !== 'string' ||
+    typeof row.expires_at !== 'string'
+  ) {
+    return { ok: false, message: 'Could not start reconnect. Please try again.' };
   }
 
   return {
@@ -177,6 +224,9 @@ export async function validatePairingToken(
     pairing: {
       sessionId: row.session_id,
       parentId: row.parent_id,
+      mode: row.mode === 'reconnect' ? 'reconnect' : 'pair',
+      targetChildId:
+        typeof row.target_child_id === 'string' ? row.target_child_id : null,
     },
   };
 }
@@ -190,7 +240,12 @@ export async function claimPairingWithToken(
     return validation;
   }
 
-  const { sessionId, parentId } = validation.pairing;
+  const { sessionId, parentId, mode } = validation.pairing;
+
+  if (mode === 'reconnect') {
+    return reconnectWithToken(token);
+  }
+
   const password = generatePairingPassword();
   const email = buildPairingEmail(sessionId);
   const deviceKey = await resolveDeviceKey();
@@ -238,6 +293,46 @@ export async function claimPairingWithToken(
   return { ok: true };
 }
 
+/**
+ * Signs this device back into an existing child account. The RPC rotates that
+ * account's password and returns it once, so only the device holding the QR can
+ * use it.
+ */
+async function reconnectWithToken(
+  token: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const deviceKey = await resolveDeviceKey();
+
+  const { data, error } = await supabase.rpc('redeem_reconnect_token', {
+    p_token: token,
+    p_device_key: deviceKey,
+  });
+
+  if (error) {
+    return { ok: false, message: mapPairingClaimError(error.message) };
+  }
+
+  const row = readRpcObject(data);
+
+  if (!row || typeof row.email !== 'string' || typeof row.password !== 'string') {
+    return {
+      ok: false,
+      message: 'Could not reconnect this device. Ask your parent for a new QR code.',
+    };
+  }
+
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: row.email,
+    password: row.password,
+  });
+
+  if (signInError) {
+    return { ok: false, message: mapPairingClaimError(signInError.message) };
+  }
+
+  return { ok: true };
+}
+
 export function subscribeToPairingSession(
   sessionId: string,
   onUpdate: (row: PairingSessionRow) => void,
@@ -268,6 +363,13 @@ function mapPairingClaimError(message: string): string {
 
   if (lowerMessage.includes('invalid or expired pairing session')) {
     return 'This QR code is no longer valid. Ask your parent to create a new one.';
+  }
+
+  if (
+    lowerMessage.includes('no longer linked') ||
+    lowerMessage.includes('no longer exists')
+  ) {
+    return 'That child account is no longer available. Ask your parent to add this device again.';
   }
 
   if (lowerMessage.includes('already registered')) {

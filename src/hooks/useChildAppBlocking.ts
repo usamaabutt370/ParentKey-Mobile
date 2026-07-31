@@ -270,6 +270,7 @@ export function useChildAppBlocking(
           accessToken: activeSession.access_token,
           refreshToken: activeSession.refresh_token ?? '',
           deviceId: deviceResult.device.id,
+          usageTrackingStartedAt: usageTrackingStartedRef.current,
         });
       }
 

@@ -15,6 +15,7 @@ object ParentKeySyncCredentials {
   private const val KEY_CHILD_ID = "child_id"
   private const val KEY_DEVICE_ID = "device_id"
   private const val KEY_FCM_TOKEN = "fcm_token"
+  private const val KEY_USAGE_TRACKING_STARTED_AT = "usage_tracking_started_at"
 
   data class Snapshot(
     val supabaseUrl: String,
@@ -33,17 +34,25 @@ object ParentKeySyncCredentials {
     refreshToken: String,
     childId: String,
     deviceId: String?,
+    usageTrackingStartedAt: String? = null,
   ) {
-    context
-      .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-      .edit()
-      .putString(KEY_SUPABASE_URL, supabaseUrl.trim().trimEnd('/'))
-      .putString(KEY_SUPABASE_ANON_KEY, supabaseAnonKey)
-      .putString(KEY_ACCESS_TOKEN, accessToken)
-      .putString(KEY_REFRESH_TOKEN, refreshToken)
-      .putString(KEY_CHILD_ID, childId)
-      .putString(KEY_DEVICE_ID, deviceId)
-      .apply()
+    val editor =
+      context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .putString(KEY_SUPABASE_URL, supabaseUrl.trim().trimEnd('/'))
+        .putString(KEY_SUPABASE_ANON_KEY, supabaseAnonKey)
+        .putString(KEY_ACCESS_TOKEN, accessToken)
+        .putString(KEY_REFRESH_TOKEN, refreshToken)
+        .putString(KEY_CHILD_ID, childId)
+    // Token-only refreshes pass no device id; keep the previously registered one.
+    if (!deviceId.isNullOrBlank()) {
+      editor.putString(KEY_DEVICE_ID, deviceId)
+    }
+    if (!usageTrackingStartedAt.isNullOrBlank()) {
+      editor.putString(KEY_USAGE_TRACKING_STARTED_AT, usageTrackingStartedAt)
+    }
+    editor.apply()
   }
 
   fun clear(context: Context) {
@@ -83,5 +92,19 @@ object ParentKeySyncCredentials {
     context
       .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
       .getString(KEY_FCM_TOKEN, null)
+      ?.takeIf { it.isNotBlank() }
+
+  fun saveUsageTrackingStartedAt(context: Context, startedAt: String) {
+    context
+      .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+      .edit()
+      .putString(KEY_USAGE_TRACKING_STARTED_AT, startedAt)
+      .apply()
+  }
+
+  fun getUsageTrackingStartedAt(context: Context): String? =
+    context
+      .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+      .getString(KEY_USAGE_TRACKING_STARTED_AT, null)
       ?.takeIf { it.isNotBlank() }
 }

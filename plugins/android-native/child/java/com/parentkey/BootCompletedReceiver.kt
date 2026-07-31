@@ -14,11 +14,15 @@ class BootCompletedReceiver : BroadcastReceiver() {
     // resumes automatically when the user has already enabled it.
     AppBlockingPreferences.getBlockedPackages(context)
 
-    // Resume remote sync so parent changes apply without opening the app.
+    // Resume remote sync so parent changes + usage apply without opening the app.
     if (ParentKeySyncCredentials.read(context) != null) {
       ParentKeySyncWorker.schedulePeriodic(context)
       ParentKeySyncWorker.enqueueImmediate(context)
       ParentKeySyncForegroundService.start(context)
+      val appContext = context.applicationContext
+      Thread {
+        ParentKeyUsageSync.syncNow(appContext, force = true)
+      }.start()
     }
   }
 }

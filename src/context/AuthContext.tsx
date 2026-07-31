@@ -21,6 +21,7 @@ import {
 import {
   disableChildBackgroundSync,
   refreshChildBackgroundSyncFromSession,
+  syncNativeSessionTokens,
 } from '../lib/childRemoteSync';
 import {
   clearDeviceRoleChoice,
@@ -95,7 +96,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const roleFromSession = getRoleFromSession(nextSession);
       if (roleFromSession === 'child' && nextSession) {
-        void refreshChildBackgroundSyncFromSession();
+        if (event === 'TOKEN_REFRESHED') {
+          // Hand the rotated token to native; restarting sync here would also
+          // re-prompt for notifications on every refresh.
+          void syncNativeSessionTokens({
+            childId: nextSession.user.id,
+            accessToken: nextSession.access_token,
+            refreshToken: nextSession.refresh_token ?? '',
+          });
+        } else {
+          void refreshChildBackgroundSyncFromSession();
+        }
       } else if (event === 'SIGNED_OUT') {
         void disableChildBackgroundSync();
       }

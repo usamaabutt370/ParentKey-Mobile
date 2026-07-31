@@ -30,3 +30,23 @@ export type UsageDailyTotal = {
   label: string;
   usageDate: string;
 };
+
+export type UsagePeriodId = 'today' | 'yesterday' | 'week';
+
+export type UsagePeriodChartBar = {
+  key: string;
+  label: string;
+  seconds: number;
+  display: string;
+};
+
+export type UsagePeriodCard = {
+  id: UsagePeriodId;
+  title: string;
+  totalSeconds: number;
+  totalLabel: string;
+  apps: UsageTopApp[];
+  moreAppsCount: number;
+  chartBars: UsagePeriodChartBar[];
+  emptyMessage: string;
+};

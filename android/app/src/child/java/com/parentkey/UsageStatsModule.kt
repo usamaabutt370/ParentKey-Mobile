@@ -177,34 +177,16 @@ class UsageStatsModule(reactContext: ReactApplicationContext) :
     startMs: Long,
     endMs: Long,
     maxDurationMs: Long,
-  ): Map<String, Long> {
-    val stats =
-      usageStatsManager.queryUsageStats(
-        UsageStatsManager.INTERVAL_DAILY,
-        startMs,
-        endMs,
-      ) ?: return emptyMap()
-
-    val usage = linkedMapOf<String, Long>()
-
-    for (stat in stats) {
-      val packageName = stat.packageName ?: continue
-      if (shouldExcludePackage(packageManager, packageName)) {
-        continue
-      }
-
-      val foregroundMs =
-        stat.totalTimeInForeground.coerceAtMost(maxDurationMs)
-
-      if (foregroundMs <= 0L) {
-        continue
-      }
-
-      usage[packageName] = foregroundMs
-    }
-
-    return usage
-  }
+  ): Map<String, Long> =
+    // Shared with native background upload so both paths report the same totals,
+    // including the session currently in the foreground.
+    ParentKeyUsageCollector.aggregateUsageMs(
+      usageStatsManager,
+      packageManager,
+      startMs,
+      endMs,
+      maxDurationMs,
+    )
 
   private fun shouldExcludePackage(
     packageManager: PackageManager,

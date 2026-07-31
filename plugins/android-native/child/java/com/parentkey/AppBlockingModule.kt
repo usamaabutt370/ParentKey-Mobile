@@ -14,6 +14,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableArray
+import com.facebook.react.bridge.WritableNativeMap
 
 class AppBlockingModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
@@ -282,6 +283,7 @@ class AppBlockingModule(reactContext: ReactApplicationContext) :
     refreshToken: String,
     childId: String,
     deviceId: String?,
+    usageTrackingStartedAt: String?,
     promise: Promise,
   ) {
     try {
@@ -293,6 +295,7 @@ class AppBlockingModule(reactContext: ReactApplicationContext) :
         refreshToken,
         childId,
         deviceId,
+        usageTrackingStartedAt,
       )
       promise.resolve(true)
     } catch (error: Exception) {
@@ -312,12 +315,39 @@ class AppBlockingModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  /**
+   * Lets JS recover a signed-out session from the tokens native sync kept fresh
+   * while the React Native UI was not running.
+   */
+  @ReactMethod
+  fun getSyncCredentials(promise: Promise) {
+    try {
+      val creds = ParentKeySyncCredentials.read(reactApplicationContext)
+      if (creds == null) {
+        promise.resolve(null)
+        return
+      }
+      val map = WritableNativeMap()
+      map.putString("accessToken", creds.accessToken)
+      map.putString("refreshToken", creds.refreshToken)
+      map.putString("childId", creds.childId)
+      map.putString("deviceId", creds.deviceId)
+      promise.resolve(map)
+    } catch (error: Exception) {
+      promise.reject("GET_SYNC_CREDENTIALS_ERROR", error.message, error)
+    }
+  }
+
   @ReactMethod
   fun startBackgroundSync(promise: Promise) {
     try {
       ParentKeySyncWorker.schedulePeriodic(reactApplicationContext)
       ParentKeySyncWorker.enqueueImmediate(reactApplicationContext)
       ParentKeySyncForegroundService.start(reactApplicationContext)
+      // App opened again after kill/force-stop — upload any OS-tracked usage now.
+      Thread {
+        ParentKeyUsageSync.syncNow(reactApplicationContext, force = true)
+      }.start()
       promise.resolve(true)
     } catch (error: Exception) {
       promise.reject("START_BACKGROUND_SYNC_ERROR", error.message, error)
