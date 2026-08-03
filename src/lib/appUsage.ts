@@ -98,6 +98,49 @@ export function formatUsageDurationLong(totalSeconds: number): string {
   return `${minutes} min`;
 }
 
+/** Compact scale label, e.g. "45m", "2h", "2.5h". */
+export function formatUsageAxisLabel(totalSeconds: number): string {
+  if (totalSeconds < 3600) {
+    return `${Math.max(1, Math.round(totalSeconds / 60))}m`;
+  }
+
+  const hours = totalSeconds / 3600;
+  return Number.isInteger(hours) ? `${hours}h` : `${hours.toFixed(1)}h`;
+}
+
+const USAGE_AXIS_STEPS_SECONDS = [
+  5 * 60,
+  10 * 60,
+  15 * 60,
+  30 * 60,
+  45 * 60,
+  60 * 60,
+  90 * 60,
+  2 * 3600,
+  3 * 3600,
+  4 * 3600,
+  6 * 3600,
+  8 * 3600,
+  12 * 3600,
+  18 * 3600,
+  24 * 3600,
+];
+
+/**
+ * Rounded ceiling for usage charts. Always leaves headroom above the busiest bar so a
+ * full track never reads as "the limit", and so heavier use has somewhere to grow.
+ */
+export function getUsageAxisMaxSeconds(topSeconds: number): number {
+  if (topSeconds <= 0) {
+    return USAGE_AXIS_STEPS_SECONDS[0];
+  }
+
+  const withHeadroom = topSeconds * 1.15;
+  const step = USAGE_AXIS_STEPS_SECONDS.find(value => value >= withHeadroom);
+
+  return step ?? Math.ceil(withHeadroom / 3600) * 3600;
+}
+
 export function getLocalDateOffset(daysBack = 0): string {
   const date = new Date();
   date.setHours(0, 0, 0, 0);
@@ -462,17 +505,19 @@ export function buildTopAppsForDates(
   );
 
   const top = sorted.slice(0, limit);
-  const maxSeconds = top[0]?.[1].foregroundSeconds ?? 0;
+  // Measure against a rounded ceiling rather than the busiest app, so the leading bar
+  // keeps headroom instead of reading as a maxed-out limit.
+  const axisMaxSeconds = getUsageAxisMaxSeconds(top[0]?.[1].foregroundSeconds ?? 0);
 
   return top.map(([packageName, value]) => ({
     packageName,
     name: value.appName,
     foregroundSeconds: value.foregroundSeconds,
     time: formatUsageDuration(value.foregroundSeconds),
-    percentage:
-      maxSeconds > 0
-        ? Math.round((value.foregroundSeconds / maxSeconds) * 100)
-        : 0,
+    percentage: Math.min(
+      100,
+      Math.round((value.foregroundSeconds / axisMaxSeconds) * 100),
+    ),
   }));
 }
 
@@ -506,16 +551,79 @@ const PERIOD_CARD_PREVIEW_LIMIT = 3;
 /** High enough that "more apps" can reveal the full synced set. */
 const PERIOD_CARD_APP_LIMIT = 200;
 
+export type UsagePeriodFallbackApp = {
+  packageName: string;
+  appName: string;
+  iconBase64?: string | null;
+  isSystemApp?: boolean;
+};
+
+function mergeUsageWithInstalledApps(
+  usageApps: UsageTopApp[],
+  installed: UsagePeriodFallbackApp[],
+  limit: number,
+): UsageTopApp[] {
+  const iconByPackage = new Map(
+    installed.map(app => [app.packageName, app.iconBase64 ?? null]),
+  );
+  const merged = new Map<string, UsageTopApp>();
+
+  for (const app of usageApps) {
+    merged.set(app.packageName, {
+      ...app,
+      iconBase64: iconByPackage.get(app.packageName) ?? app.iconBase64 ?? null,
+    });
+  }
+
+  const preferredInstalled = [
+    ...installed.filter(app => !app.isSystemApp),
+    ...installed.filter(app => app.isSystemApp),
+  ];
+
+  for (const app of preferredInstalled) {
+    if (merged.has(app.packageName)) {
+      continue;
+    }
+    if (isExcludedUsagePackage(app.packageName)) {
+      continue;
+    }
+
+    merged.set(app.packageName, {
+      packageName: app.packageName,
+      name: app.appName,
+      time: formatUsageDurationLong(0),
+      percentage: 0,
+      foregroundSeconds: 0,
+      iconBase64: app.iconBase64 ?? null,
+    });
+  }
+
+  return Array.from(merged.values())
+    .sort((left, right) => {
+      if (right.foregroundSeconds !== left.foregroundSeconds) {
+        return right.foregroundSeconds - left.foregroundSeconds;
+      }
+      return left.name.localeCompare(right.name);
+    })
+    .slice(0, limit);
+}
+
 function buildDayPeriodCard(params: {
   id: 'today' | 'yesterday';
   title: string;
   usageDate: string;
   records: AppUsageDailyRecord[];
+  installedApps: UsagePeriodFallbackApp[];
   emptyMessage: string;
 }): UsagePeriodCard {
-  const apps = buildTopAppsForDates(
+  const usageApps = buildTopAppsForDates(
     params.records,
     [params.usageDate],
+    PERIOD_CARD_APP_LIMIT,
+  );
+  const apps = mergeUsageWithInstalledApps(
+    usageApps,
+    params.installedApps,
     PERIOD_CARD_APP_LIMIT,
   );
   const totalSeconds = sumSecondsForDates(params.records, [params.usageDate]);
@@ -527,20 +635,26 @@ function buildDayPeriodCard(params: {
     totalLabel: formatUsageDurationLong(totalSeconds),
     apps,
     moreAppsCount: Math.max(0, apps.length - PERIOD_CARD_PREVIEW_LIMIT),
-    chartBars: buildAppChartBars(apps),
+    chartBars: buildAppChartBars(usageApps),
     emptyMessage: params.emptyMessage,
   };
 }
 
 export function buildUsagePeriodCards(
   records: AppUsageDailyRecord[],
+  installedApps: UsagePeriodFallbackApp[] = [],
 ): UsagePeriodCard[] {
   const today = getLocalDateOffset(0);
   const yesterday = getLocalDateOffset(1);
   const weekDates = getWeekDates();
-  const weekApps = buildTopAppsForDates(
+  const weekUsageApps = buildTopAppsForDates(
     records,
     weekDates,
+    PERIOD_CARD_APP_LIMIT,
+  );
+  const weekApps = mergeUsageWithInstalledApps(
+    weekUsageApps,
+    installedApps,
     PERIOD_CARD_APP_LIMIT,
   );
   const weekSeconds = sumSecondsForDates(records, weekDates);
@@ -568,6 +682,7 @@ export function buildUsagePeriodCards(
       title: 'Today on the phone',
       usageDate: today,
       records,
+      installedApps,
       emptyMessage: 'No usage recorded for today yet.',
     }),
     buildDayPeriodCard({
@@ -575,6 +690,7 @@ export function buildUsagePeriodCards(
       title: 'Yesterday on the phone',
       usageDate: yesterday,
       records,
+      installedApps,
       emptyMessage: 'No usage recorded for yesterday.',
     }),
     weekCard,

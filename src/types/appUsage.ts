@@ -22,6 +22,7 @@ export type UsageTopApp = {
   time: string;
   percentage: number;
   foregroundSeconds: number;
+  iconBase64?: string | null;
 };
 
 export type UsageDailyTotal = {

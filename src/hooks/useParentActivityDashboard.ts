@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import {
+  fetchChildInstalledApps,
   fetchParentBlockRules,
   fetchParentChildDevices,
   type AppBlockRule,
@@ -12,6 +13,7 @@ import {
   buildUsageReportSummary,
   buildWeeklyUsageTotals,
   fetchParentChildrenUsage,
+  type UsagePeriodFallbackApp,
 } from '../lib/appUsage';
 import { fetchParentChildren, getChildDisplayName } from '../lib/children';
 import {
@@ -306,14 +308,54 @@ export function useParentActivityDashboard() {
     [children, selectedChildId],
   );
 
+  const [installedFallbackApps, setInstalledFallbackApps] = useState<
+    UsagePeriodFallbackApp[]
+  >([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!selectedChildId) {
+      setInstalledFallbackApps([]);
+      return;
+    }
+
+    const loadInstalled = async () => {
+      const result = await fetchChildInstalledApps(selectedChildId);
+      if (cancelled) {
+        return;
+      }
+
+      if (!result.ok) {
+        setInstalledFallbackApps([]);
+        return;
+      }
+
+      setInstalledFallbackApps(
+        result.apps.map(app => ({
+          packageName: app.packageName,
+          appName: app.appName,
+          iconBase64: app.iconBase64,
+          isSystemApp: app.isSystemApp,
+        })),
+      );
+    };
+
+    void loadInstalled();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedChildId]);
+
   const selectedView = useMemo(
     () => buildScopedView(records, rules, alerts, selectedChildId),
     [alerts, records, rules, selectedChildId],
   );
 
   const selectedPeriodCards = useMemo(
-    () => buildUsagePeriodCards(selectedView.records),
-    [selectedView.records],
+    () => buildUsagePeriodCards(selectedView.records, installedFallbackApps),
+    [installedFallbackApps, selectedView.records],
   );
 
   return {

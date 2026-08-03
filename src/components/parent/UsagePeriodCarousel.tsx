@@ -13,6 +13,11 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { AppIcon } from '../AppIcon';
 import { useTheme } from '../../context/ThemeContext';
+import {
+  formatUsageAxisLabel,
+  formatUsageDuration,
+  getUsageAxisMaxSeconds,
+} from '../../lib/appUsage';
 import type { UsagePeriodCard } from '../../types/appUsage';
 import type { ColorPalette } from '../../theme/colors';
 import { radii, spacing, typography } from '../../theme';
@@ -22,6 +27,12 @@ type Props = {
   emptyHint?: string;
 };
 
+const PERIOD_CARD_PREVIEW_LIMIT = 3;
+/** Collapsed card height — keeps empty and filled cards visually aligned. */
+const PERIOD_CARD_HEIGHT = 510;
+/** Extra height added when “All apps” is open so the list can scroll. */
+const PERIOD_CARD_EXPAND_EXTRA = 100;
+
 function PeriodChart({
   bars,
   colors,
@@ -30,42 +41,59 @@ function PeriodChart({
   colors: ColorPalette;
 }) {
   const styles = useMemo(() => createChartStyles(colors), [colors]);
-  const maxSeconds = Math.max(...bars.map(bar => bar.seconds), 1);
-
-  if (bars.every(bar => bar.seconds <= 0)) {
-    return (
-      <View style={styles.emptyChart}>
-        <View style={styles.emptyChartLine} />
-        <View style={styles.emptyChartLine} />
-        <View style={styles.emptyChartLine} />
-      </View>
-    );
-  }
+  const topSeconds = Math.max(...bars.map(bar => bar.seconds), 0);
+  const axisMaxSeconds = getUsageAxisMaxSeconds(topSeconds);
+  const hasBars = bars.some(bar => bar.seconds > 0);
 
   return (
-    <View style={styles.chart}>
-      {bars.map(bar => {
-        const height =
-          bar.seconds > 0 ? Math.max((bar.seconds / maxSeconds) * 100, 8) : 0;
+    <View style={styles.chartWrap}>
+      <View style={styles.scaleRow}>
+        <Text style={styles.scaleLabel}>
+          {hasBars
+            ? `Scale up to ${formatUsageAxisLabel(axisMaxSeconds)}`
+            : 'Scale'}
+        </Text>
+        <Text style={styles.scaleLabel}>
+          {hasBars ? `Busiest ${formatUsageDuration(topSeconds)}` : 'No activity'}
+        </Text>
+      </View>
 
-        return (
-          <View key={bar.key} style={styles.barColumn}>
-            <View style={styles.barTrack}>
-              {height > 0 ? (
-                <View style={[styles.barFill, { height: `${height}%` }]} />
-              ) : null}
+      <View style={styles.chart}>
+        <View pointerEvents="none" style={styles.gridLines}>
+          <View style={styles.gridLine} />
+          <View style={styles.gridLine} />
+          <View style={styles.gridLine} />
+        </View>
+
+        {(hasBars
+          ? bars
+          : Array.from({ length: 7 }, (_, index) => ({
+              key: `empty-${index}`,
+              label: '',
+              seconds: 0,
+              display: '',
+            }))
+        ).map(bar => {
+          const ratio = axisMaxSeconds > 0 ? bar.seconds / axisMaxSeconds : 0;
+          const height = bar.seconds > 0 ? Math.max(ratio * 100, 6) : 0;
+
+          return (
+            <View key={bar.key} style={styles.barColumn}>
+              <View style={styles.barTrack}>
+                {height > 0 ? (
+                  <View style={[styles.barFill, { height: `${height}%` }]} />
+                ) : null}
+              </View>
+              <Text numberOfLines={1} style={styles.barLabel}>
+                {bar.label || ' '}
+              </Text>
             </View>
-            <Text numberOfLines={1} style={styles.barLabel}>
-              {bar.label}
-            </Text>
-          </View>
-        );
-      })}
+          );
+        })}
+      </View>
     </View>
   );
 }
-
-const PERIOD_CARD_PREVIEW_LIMIT = 3;
 
 function PeriodCardView({
   card,
@@ -79,13 +107,12 @@ function PeriodCardView({
   const { colors } = useTheme();
   const styles = useMemo(() => createCardStyles(colors), [colors]);
   const [expanded, setExpanded] = useState(false);
-  const hasUsage = card.totalSeconds > 0;
-  const visibleApps = expanded
-    ? card.apps
-    : card.apps.slice(0, PERIOD_CARD_PREVIEW_LIMIT);
-  const hiddenCount = Math.max(0, card.apps.length - PERIOD_CARD_PREVIEW_LIMIT);
+  const previewApps = card.apps.slice(0, PERIOD_CARD_PREVIEW_LIMIT);
+  const canExpand = card.apps.length > PERIOD_CARD_PREVIEW_LIMIT;
+  const cardHeight = expanded
+    ? PERIOD_CARD_HEIGHT + PERIOD_CARD_EXPAND_EXTRA
+    : PERIOD_CARD_HEIGHT;
 
-  // Reset when the carousel slides to a different period card.
   useEffect(() => {
     setExpanded(false);
   }, [card.id]);
@@ -95,47 +122,84 @@ function PeriodCardView({
       colors={['#0F766E', '#115E59', '#0B3B44']}
       end={{ x: 0.2, y: 1 }}
       start={{ x: 0.1, y: 0 }}
-      style={[styles.card, { width }]}>
+      style={[styles.card, { width, height: cardHeight }]}>
       <Text style={styles.title}>{card.title}</Text>
       <Text style={styles.total}>{card.totalLabel}</Text>
 
       <PeriodChart bars={card.chartBars} colors={colors} />
 
-      {hasUsage ? (
-        <View style={styles.appList}>
-          {visibleApps.map((app, index) => (
-            <View
-              key={app.packageName}
-              style={[
-                styles.appRow,
-                index < visibleApps.length - 1 && styles.appRowBorder,
-              ]}>
-              <AppIcon name={app.name} packageName={app.packageName} size={32} />
-              <Text numberOfLines={1} style={styles.appName}>
-                {app.name}
-              </Text>
-              <Text style={styles.appTime}>{app.time}</Text>
-            </View>
-          ))}
-          {hiddenCount > 0 ? (
+      <View style={styles.appSection}>
+        {card.apps.length > 0 ? (
+          <>
+            {expanded ? (
+              <FlatList
+                data={card.apps}
+                keyExtractor={item => item.packageName}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator
+                style={styles.appScroll}
+                contentContainerStyle={styles.appScrollContent}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item, index }) => (
+                  <View
+                    style={[
+                      styles.appRow,
+                      index < card.apps.length - 1 && styles.appRowBorder,
+                    ]}>
+                    <AppIcon
+                      iconBase64={item.iconBase64}
+                      name={item.name}
+                      packageName={item.packageName}
+                      size={32}
+                    />
+                    <Text numberOfLines={1} style={styles.appName}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.appTime}>{item.time}</Text>
+                  </View>
+                )}
+              />
+            ) : (
+              <View style={styles.appList}>
+                {previewApps.map((app, index) => (
+                  <View
+                    key={app.packageName}
+                    style={[
+                      styles.appRow,
+                      index < previewApps.length - 1 && styles.appRowBorder,
+                    ]}>
+                    <AppIcon
+                      iconBase64={app.iconBase64}
+                      name={app.name}
+                      packageName={app.packageName}
+                      size={32}
+                    />
+                    <Text numberOfLines={1} style={styles.appName}>
+                      {app.name}
+                    </Text>
+                    <Text style={styles.appTime}>{app.time}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
             <Pressable
               accessibilityRole="button"
+              disabled={!canExpand && !expanded}
               onPress={() => setExpanded(current => !current)}
               style={({ pressed }) => [
                 styles.moreAppsButton,
-                pressed && styles.moreAppsButtonPressed,
+                pressed && (canExpand || expanded) && styles.moreAppsButtonPressed,
+                !canExpand && !expanded && styles.moreAppsButtonDisabled,
               ]}>
               <Text style={styles.moreApps}>
-                {expanded
-                  ? 'Show less'
-                  : `${hiddenCount} more app${hiddenCount === 1 ? '' : 's'}`}
+                {expanded ? 'Show less' : 'All apps'}
               </Text>
             </Pressable>
-          ) : null}
-        </View>
-      ) : (
-        <Text style={styles.emptyText}>{emptyHint ?? card.emptyMessage}</Text>
-      )}
+          </>
+        ) : (
+          <Text style={styles.emptyText}>{emptyHint ?? card.emptyMessage}</Text>
+        )}
+      </View>
     </LinearGradient>
   );
 }
@@ -354,13 +418,13 @@ function createCarouselStyles(colors: ColorPalette) {
   });
 }
 
-function createCardStyles(colors: ColorPalette) {
+function createCardStyles(_colors: ColorPalette) {
   return StyleSheet.create({
     card: {
       borderRadius: radii.lg,
       gap: spacing.md,
-      overflow: 'hidden',
       padding: spacing.lg,
+      paddingBottom: spacing.lg + spacing.sm,
       ...Platform.select({
         ios: {
           shadowColor: '#000',
@@ -386,13 +450,25 @@ function createCardStyles(colors: ColorPalette) {
       lineHeight: 40,
     },
     appList: {
+      flexGrow: 0,
       gap: 0,
-      marginTop: spacing.xs,
+    },
+    appSection: {
+      flex: 1,
+      minHeight: 0,
+    },
+    appScroll: {
+      flex: 1,
+    },
+    appScrollContent: {
+      flexGrow: 1,
+      paddingBottom: spacing.xs,
     },
     appRow: {
       alignItems: 'center',
       flexDirection: 'row',
       gap: spacing.md,
+      minHeight: 32 + (spacing.sm + 2) * 2,
       paddingVertical: spacing.sm + 2,
     },
     appRowBorder: {
@@ -413,11 +489,16 @@ function createCardStyles(colors: ColorPalette) {
     },
     moreAppsButton: {
       alignSelf: 'flex-start',
+      flexShrink: 0,
       marginTop: spacing.sm,
-      paddingVertical: spacing.xs,
+      paddingBottom: spacing.xs,
+      paddingTop: spacing.xs,
     },
     moreAppsButtonPressed: {
       opacity: 0.7,
+    },
+    moreAppsButtonDisabled: {
+      opacity: 0.55,
     },
     moreApps: {
       ...typography.caption,
@@ -429,20 +510,47 @@ function createCardStyles(colors: ColorPalette) {
       ...typography.caption,
       color: 'rgba(255,255,255,0.75)',
       lineHeight: 20,
-      marginTop: spacing.xs,
     },
   });
 }
 
 function createChartStyles(_colors: ColorPalette) {
   return StyleSheet.create({
+    chartWrap: {
+      gap: spacing.xs,
+      height: 156,
+      marginTop: spacing.xs,
+    },
+    scaleRow: {
+      flexDirection: 'row',
+      height: 16,
+      justifyContent: 'space-between',
+    },
+    scaleLabel: {
+      color: 'rgba(255,255,255,0.7)',
+      fontSize: 11,
+      fontWeight: '600',
+    },
     chart: {
       alignItems: 'flex-end',
       flexDirection: 'row',
       gap: 6,
       height: 120,
       justifyContent: 'space-between',
-      marginTop: spacing.xs,
+    },
+    gridLines: {
+      // Matches barTrack height and the label strip below it so the lines land on the track.
+      bottom: 16,
+      height: 88,
+      justifyContent: 'space-between',
+      left: 0,
+      position: 'absolute',
+      right: 0,
+    },
+    gridLine: {
+      backgroundColor: 'rgba(255,255,255,0.10)',
+      height: StyleSheet.hairlineWidth,
+      width: '100%',
     },
     barColumn: {
       alignItems: 'center',
@@ -467,19 +575,8 @@ function createChartStyles(_colors: ColorPalette) {
       color: 'rgba(255,255,255,0.7)',
       fontSize: 9,
       fontWeight: '600',
+      height: 12,
       textAlign: 'center',
-      width: '100%',
-    },
-    emptyChart: {
-      gap: spacing.md,
-      height: 120,
-      justifyContent: 'center',
-      paddingVertical: spacing.md,
-    },
-    emptyChartLine: {
-      backgroundColor: 'rgba(255,255,255,0.12)',
-      borderRadius: radii.pill,
-      height: 1,
       width: '100%',
     },
   });
