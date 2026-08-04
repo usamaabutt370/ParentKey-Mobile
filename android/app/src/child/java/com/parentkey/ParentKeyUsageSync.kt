@@ -58,9 +58,21 @@ object ParentKeyUsageSync {
       }
 
       val records = ParentKeyUsageCollector.collectToday(context)
+      val hourlyRecords = ParentKeyUsageCollector.collectTodayHourly(context)
       val today = localDateString()
       val capped =
         records
+          .filter { it.usageDate == today && it.foregroundSeconds > 0 }
+          .map { record ->
+            record.copy(
+              foregroundSeconds =
+                capSeconds(record.foregroundSeconds, trackingStartedAt!!, today),
+            )
+          }
+          .filter { it.foregroundSeconds > 0 }
+
+      val cappedHourly =
+        hourlyRecords
           .filter { it.usageDate == today && it.foregroundSeconds > 0 }
           .map { record ->
             record.copy(
@@ -80,6 +92,11 @@ object ParentKeyUsageSync {
         Log.i(TAG, "Uploaded ${capped.size} apps: $preview")
       } else {
         Log.w(TAG, "No usage rows to upload for $today")
+      }
+
+      if (cappedHourly.isNotEmpty()) {
+        upsertHourlyRows(session, deviceId, cappedHourly)
+        Log.i(TAG, "Uploaded ${cappedHourly.size} hourly buckets")
       }
 
       // Keep parent Online / Last synced honest even when only native sync runs.
@@ -227,6 +244,39 @@ object ParentKeyUsageSync {
     val url =
       "${creds.supabaseUrl}/rest/v1/child_app_usage_daily" +
         "?on_conflict=device_id,package_name,usage_date"
+    httpRaw(
+      "POST",
+      url,
+      creds.supabaseAnonKey,
+      creds.accessToken,
+      array.toString(),
+      prefer = "resolution=merge-duplicates,return=minimal",
+    )
+  }
+
+  private fun upsertHourlyRows(
+    creds: ParentKeySyncCredentials.Snapshot,
+    deviceId: String,
+    records: List<ParentKeyUsageCollector.HourlyRecord>,
+  ) {
+    val syncedAt = utcIsoNow()
+    val array = JSONArray()
+    for (record in records) {
+      array.put(
+        JSONObject()
+          .put("child_id", creds.childId)
+          .put("device_id", deviceId)
+          .put("package_name", record.packageName)
+          .put("app_name", record.appName)
+          .put("usage_date", record.usageDate)
+          .put("hour", record.hour)
+          .put("foreground_seconds", record.foregroundSeconds)
+          .put("synced_at", syncedAt),
+      )
+    }
+    val url =
+      "${creds.supabaseUrl}/rest/v1/child_app_usage_hourly" +
+        "?on_conflict=device_id,package_name,usage_date,hour"
     httpRaw(
       "POST",
       url,

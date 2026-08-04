@@ -7,10 +7,19 @@ export type NativeDailyAppUsage = {
   foregroundSeconds: number;
 };
 
+export type NativeHourlyAppUsage = {
+  packageName: string;
+  appName: string;
+  usageDate: string;
+  hour: number;
+  foregroundSeconds: number;
+};
+
 type UsageStatsModule = {
   isUsageAccessGranted: () => Promise<boolean>;
   openUsageAccessSettings: () => Promise<boolean>;
   getDailyAppUsage: (daysBack: number) => Promise<NativeDailyAppUsage[]>;
+  getHourlyAppUsage: () => Promise<NativeHourlyAppUsage[]>;
 };
 
 const usageStatsModule = NativeModules.UsageStats as UsageStatsModule | undefined;
@@ -50,6 +59,22 @@ export async function fetchDailyAppUsage(
     packageName: record.packageName,
     appName: record.appName,
     usageDate: record.usageDate,
+    foregroundSeconds: Math.max(0, Math.round(record.foregroundSeconds)),
+  }));
+}
+
+export async function fetchHourlyAppUsage(): Promise<NativeHourlyAppUsage[]> {
+  const module = requireModule();
+  if (typeof module.getHourlyAppUsage !== 'function') {
+    return [];
+  }
+
+  const records = await module.getHourlyAppUsage();
+  return records.map(record => ({
+    packageName: record.packageName,
+    appName: record.appName,
+    usageDate: record.usageDate,
+    hour: Math.max(0, Math.min(23, Math.round(record.hour))),
     foregroundSeconds: Math.max(0, Math.round(record.foregroundSeconds)),
   }));
 }

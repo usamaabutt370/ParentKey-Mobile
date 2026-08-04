@@ -9,6 +9,7 @@ import {
 } from '../lib/androidAppBlocking';
 import {
   fetchDailyAppUsage,
+  fetchHourlyAppUsage,
   isUsageAccessGranted,
   isAndroidUsageStatsSupported,
 } from '../lib/androidUsageStats';
@@ -17,7 +18,7 @@ import {
   registerChildDevice,
   syncChildInstalledApps,
 } from '../lib/appRules';
-import { syncChildAppUsage } from '../lib/appUsage';
+import { syncChildAppUsage, syncChildAppUsageHourly } from '../lib/appUsage';
 import { enableChildBackgroundSync } from '../lib/childRemoteSync';
 import {
   getChildAppInventoryCache,
@@ -143,6 +144,17 @@ export function useChildAppBlocking(
         if (!syncUsageResult.ok) {
           setError(syncUsageResult.message);
           return;
+        }
+
+        try {
+          const hourlyRecords = await fetchHourlyAppUsage();
+          await syncChildAppUsageHourly({
+            childId: childIdValue,
+            deviceId,
+            records: hourlyRecords,
+          });
+        } catch {
+          // Hourly sync is optional until the child binary includes getHourlyAppUsage.
         }
 
         if (isFirstUsageSync) {

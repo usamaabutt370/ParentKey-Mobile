@@ -1,13 +1,18 @@
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import {
   ChildPickerSheet,
   ChildSelectorChip,
-  RecentAlertsList,
-  SectionHeader,
-  StatCard,
+  HomeActivitySheet,
+  HOME_ACTIVITY_SHEET_PEEK,
   UsagePeriodCarousel,
 } from '../../components/parent';
 import { ScreenLayout, useScreenStyles } from '../../components';
@@ -34,12 +39,17 @@ export function ParentHomeScreen() {
     setSelectedChildId,
     selectedSummary: summary,
     selectedStats: stats,
+    selectedTopApps: topApps,
     selectedPeriodCards,
     selectedAlerts: alerts,
     loading: activityLoading,
   } = useParentActivityDashboard();
   const [pickerVisible, setPickerVisible] = useState(false);
   const firstName = session?.user.user_metadata?.first_name;
+  const parentName =
+    typeof firstName === 'string' && firstName.trim().length > 0
+      ? firstName.trim()
+      : null;
   const selectedName = selectedChild
     ? getChildDisplayName(selectedChild)
     : null;
@@ -49,12 +59,21 @@ export function ParentHomeScreen() {
       : 'Usage data appears after the child enables Usage access and syncs.';
 
   return (
-    <ScreenLayout
-      safeAreaEdges={['top', 'left', 'right']}
-      scrollable
-      contentStyle={styles.content}>
-      <View style={screenStyles.header}>
-        <Text style={screenStyles.brand}>ParentKey</Text>
+    <View style={styles.root}>
+      <ScreenLayout
+        safeAreaEdges={['top', 'left', 'right']}
+        scrollable
+        contentStyle={styles.content}
+        style={styles.layout}>
+        <View style={styles.topBar}>
+          <Text style={screenStyles.brand}>ParentKey</Text>
+          {parentName ? (
+            <Text numberOfLines={1} style={styles.parentName}>
+              {parentName}
+            </Text>
+          ) : null}
+        </View>
+
         {children.length > 0 ? (
           <ChildSelectorChip
             child={selectedChild}
@@ -62,39 +81,7 @@ export function ParentHomeScreen() {
             onPress={() => setPickerVisible(true)}
           />
         ) : null}
-        <Text style={[screenStyles.title, styles.greeting]}>
-          {firstName ? `Hi, ${firstName}` : 'Dashboard'}
-        </Text>
-        <Text style={screenStyles.subtitle}>
-          {selectedName
-            ? `Here's how ${selectedName} is doing today`
-            : "Here's how your family is doing today"}
-        </Text>
-      </View>
 
-      <View style={styles.statsRow}>
-        <StatCard
-          label="Screen time"
-          value={activityLoading ? '...' : summary.weekLabel}
-        />
-        <StatCard
-          accent={colors.brand.tealLight}
-          label="Active rules"
-          value={activityLoading ? '...' : String(stats.activeRulesCount)}
-        />
-        <StatCard
-          accent={colors.error}
-          label="Alerts"
-          value={activityLoading ? '...' : String(stats.alertCount)}
-        />
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeader
-          actionLabel="Full report"
-          onActionPress={() => navigation.navigate('Reports')}
-          title="Phone usage"
-        />
         {activityLoading ? (
           <ActivityIndicator color={colors.brand.tealLight} size="small" />
         ) : (
@@ -103,16 +90,19 @@ export function ParentHomeScreen() {
             emptyHint={usageEmptyHint}
           />
         )}
-      </View>
+      </ScreenLayout>
 
-      <View style={styles.section}>
-        <SectionHeader title="Recent alerts" />
-        {activityLoading ? (
-          <ActivityIndicator color={colors.brand.tealLight} size="small" />
-        ) : (
-          <RecentAlertsList alerts={alerts} />
-        )}
-      </View>
+      <HomeActivitySheet
+        alerts={alerts}
+        childName={selectedName}
+        loading={activityLoading}
+        stats={stats}
+        summary={summary}
+        topApps={topApps}
+        onOpenChildren={() => navigation.navigate('Children')}
+        onOpenReports={() => navigation.navigate('Reports')}
+        onOpenRules={() => navigation.navigate('Controls')}
+      />
 
       <ChildPickerSheet
         childrenList={children}
@@ -122,24 +112,37 @@ export function ParentHomeScreen() {
         selectedChildId={selectedChildId}
         visible={pickerVisible}
       />
-    </ScreenLayout>
+    </View>
   );
 }
 
-function createStyles(_colors: ColorPalette) {
+function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
+    root: {
+      flex: 1,
+    },
+    layout: {
+      paddingBottom: 0,
+    },
     content: {
       gap: spacing.xl,
+      // Keep the usage card above the always-visible peek sheet.
+      paddingBottom: HOME_ACTIVITY_SHEET_PEEK + spacing.xl,
     },
-    greeting: {
-      fontSize: 28,
-    },
-    statsRow: {
+    topBar: {
+      alignItems: 'center',
       flexDirection: 'row',
-      gap: spacing.sm,
-    },
-    section: {
       gap: spacing.md,
+      justifyContent: 'space-between',
+    },
+    parentName: {
+      ...typography.label,
+      color: colors.text.primary,
+      flexShrink: 1,
+      fontSize: 16,
+      fontWeight: '600',
+      maxWidth: '48%',
+      textAlign: 'right',
     },
   });
 }

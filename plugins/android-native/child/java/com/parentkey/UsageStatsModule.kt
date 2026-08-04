@@ -140,6 +140,33 @@ class UsageStatsModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  @ReactMethod
+  fun getHourlyAppUsage(promise: Promise) {
+    try {
+      if (!hasUsageAccess()) {
+        promise.reject(
+          "USAGE_ACCESS_DENIED",
+          "Usage access is not granted. Enable ParentKey in Usage access settings.",
+        )
+        return
+      }
+
+      val records = WritableNativeArray()
+      for (record in ParentKeyUsageCollector.collectTodayHourly(reactApplicationContext)) {
+        val row = WritableNativeMap()
+        row.putString("packageName", record.packageName)
+        row.putString("appName", record.appName)
+        row.putString("usageDate", record.usageDate)
+        row.putInt("hour", record.hour)
+        row.putDouble("foregroundSeconds", record.foregroundSeconds.toDouble())
+        records.pushMap(row)
+      }
+      promise.resolve(records)
+    } catch (error: Exception) {
+      promise.reject("USAGE_STATS_HOURLY_ERROR", error.message, error)
+    }
+  }
+
   private fun hasUsageAccess(): Boolean {
     val appOps =
       reactApplicationContext.getSystemService(AppOpsManager::class.java)

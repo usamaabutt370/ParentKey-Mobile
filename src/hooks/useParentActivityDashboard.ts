@@ -12,6 +12,7 @@ import {
   buildUsagePeriodCards,
   buildUsageReportSummary,
   buildWeeklyUsageTotals,
+  fetchParentChildrenHourlyUsage,
   fetchParentChildrenUsage,
   type UsagePeriodFallbackApp,
 } from '../lib/appUsage';
@@ -23,6 +24,7 @@ import {
 import { supabase } from '../lib/supabase';
 import type {
   AppUsageDailyRecord,
+  AppUsageHourlyRecord,
   UsageDailyTotal,
   UsageReportSummary,
   UsageTopApp,
@@ -100,6 +102,9 @@ export function useParentActivityDashboard() {
   const [children, setChildren] = useState<ChildProfile[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [records, setRecords] = useState<AppUsageDailyRecord[]>([]);
+  const [hourlyRecords, setHourlyRecords] = useState<AppUsageHourlyRecord[]>(
+    [],
+  );
   const [rules, setRules] = useState<AppBlockRule[]>([]);
   const [summary, setSummary] = useState<UsageReportSummary>(EMPTY_SUMMARY);
   const [stats, setStats] = useState<ParentActivityStats>({
@@ -123,6 +128,7 @@ export function useParentActivityDashboard() {
       setChildren([]);
       setSelectedChildId(null);
       setRecords([]);
+      setHourlyRecords([]);
       setRules([]);
       setTopApps([]);
       setWeeklyUsage([]);
@@ -164,6 +170,7 @@ export function useParentActivityDashboard() {
 
     if (childIds.length === 0) {
       setRecords([]);
+      setHourlyRecords([]);
       setRules([]);
       setTopApps([]);
       setWeeklyUsage([]);
@@ -175,11 +182,13 @@ export function useParentActivityDashboard() {
       return;
     }
 
-    const [rulesResult, usageResult, devicesResult] = await Promise.all([
-      fetchParentBlockRules(parentId),
-      fetchParentChildrenUsage(childIds, 7),
-      fetchParentChildDevices(childIds),
-    ]);
+    const [rulesResult, usageResult, hourlyResult, devicesResult] =
+      await Promise.all([
+        fetchParentBlockRules(parentId),
+        fetchParentChildrenUsage(childIds, 7),
+        fetchParentChildrenHourlyUsage(childIds, 2),
+        fetchParentChildDevices(childIds),
+      ]);
 
     if (!rulesResult.ok) {
       setError(rulesResult.message);
@@ -200,6 +209,7 @@ export function useParentActivityDashboard() {
     }
 
     const nextRecords = usageResult.records;
+    const nextHourlyRecords = hourlyResult.ok ? hourlyResult.records : [];
     const nextRules = rulesResult.rules;
     const nextSummary = buildUsageReportSummary(nextRecords);
     const today = getLocalDateString();
@@ -218,6 +228,7 @@ export function useParentActivityDashboard() {
     });
 
     setRecords(nextRecords);
+    setHourlyRecords(nextHourlyRecords);
     setRules(nextRules);
     setSummary(nextSummary);
     setTopApps(buildTopAppsForDate(nextRecords, today));
@@ -294,6 +305,18 @@ export function useParentActivityDashboard() {
           scheduleRefresh();
         },
       );
+      channel.on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'child_app_usage_hourly',
+          filter: `child_id=eq.${childId}`,
+        },
+        () => {
+          scheduleRefresh();
+        },
+      );
     }
 
     channel.subscribe();
@@ -353,9 +376,21 @@ export function useParentActivityDashboard() {
     [alerts, records, rules, selectedChildId],
   );
 
+  const selectedHourlyRecords = useMemo(() => {
+    if (!selectedChildId) {
+      return [];
+    }
+    return hourlyRecords.filter(record => record.childId === selectedChildId);
+  }, [hourlyRecords, selectedChildId]);
+
   const selectedPeriodCards = useMemo(
-    () => buildUsagePeriodCards(selectedView.records, installedFallbackApps),
-    [installedFallbackApps, selectedView.records],
+    () =>
+      buildUsagePeriodCards(
+        selectedView.records,
+        installedFallbackApps,
+        selectedHourlyRecords,
+      ),
+    [installedFallbackApps, selectedHourlyRecords, selectedView.records],
   );
 
   return {

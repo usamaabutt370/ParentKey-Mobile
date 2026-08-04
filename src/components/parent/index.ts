@@ -4,6 +4,7 @@ export { AvatarPicker } from './AvatarPicker';
 export { ChildCard } from './ChildCard';
 export { ChildPickerSheet } from './ChildPickerSheet';
 export { ChildSelectorChip } from './ChildSelectorChip';
+export { HomeActivitySheet, HOME_ACTIVITY_SHEET_PEEK } from './HomeActivitySheet';
 export { InfoTipCard } from './InfoTipCard';
 export { LinkChildMethodModal } from './LinkChildMethodModal';
 export { RecentAlertsList } from './RecentAlertsList';

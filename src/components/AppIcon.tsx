@@ -117,7 +117,7 @@ function createStyles(colors: ColorPalette, size: number) {
       width: size,
     },
     image: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       height: size,
       width: size,
     },
