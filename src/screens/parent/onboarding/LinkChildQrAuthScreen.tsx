@@ -15,13 +15,13 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Feather from 'react-native-vector-icons/Feather';
 import {
   AuthButton,
   AuthTextInput,
   ScreenBackground,
   Spacer,
 } from '../../../components';
+import { PARENT_ONBOARDING_TOTAL_STEPS } from '../../../constants/parentOnboarding';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { isValidEmail } from '../../../lib/auth';
@@ -32,6 +32,7 @@ import {
 import type { AuthStackParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { radii, spacing, typography } from '../../../theme';
+import { ParentOnboardingStepLayout } from './ParentOnboardingStepLayout';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'LinkChildQrAuth'>;
 
@@ -255,65 +256,42 @@ export function LinkChildQrAuthScreen({ navigation }: Props) {
   return (
     <ScreenBackground>
       <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
-        <Pressable
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-          hitSlop={8}
-          onPress={() => {
-            navigation.navigate('InstallChildApp');
-          }}
-          style={styles.backButton}>
-          <Feather color={colors.text.primary} name="chevron-left" size={24} />
-        </Pressable>
-
-        <View style={styles.qrStage}>
-          <Text style={styles.stageEyebrow}>STEP 3 OF 4</Text>
-          <Text style={styles.stageTitle}>Link with QR code</Text>
-          <Text style={styles.stageSubtitle}>
-            {awaitingSession
-              ? 'You’re signed in. Preparing a secure code for your child’s phone…'
-              : 'A QR code appears only after you sign in as a parent, so only your family can link a device.'}
-          </Text>
-
-          <View
-            style={[
-              styles.qrCard,
-              awaitingSession ? styles.qrCardActive : null,
-            ]}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          style={styles.scroll}>
+          <ParentOnboardingStepLayout
+            currentStep={3}
+            image={require('../../../../assets/onboarding/link-child-qr.png')}
+            onBack={() => {
+              navigation.navigate('InstallChildApp');
+            }}
+            subtitle={
+              awaitingSession
+                ? 'You’re signed in. Preparing a secure code for your child’s phone…'
+                : 'A QR code appears only after you sign in as a parent, so only your family can link a device.'
+            }
+            title="Link with QR code"
+            totalSteps={PARENT_ONBOARDING_TOTAL_STEPS}>
             {awaitingSession ? (
-              <>
+              <View style={[styles.qrCard, styles.qrCardActive]}>
                 <ActivityIndicator
                   color={colors.brand.tealLight}
                   size="large"
                   style={styles.loader}
                 />
                 <Text style={styles.qrHint}>Preparing your QR code…</Text>
-              </>
-            ) : (
-              <>
-                <View style={styles.lockBadge}>
-                  <Feather
-                    color={colors.brand.tealLight}
-                    name="lock"
-                    size={28}
-                  />
-                </View>
-                <Text style={styles.qrHint}>No QR code yet</Text>
-                <Text style={styles.qrHintSecondary}>
-                  Sign in or create a parent account to generate a one-time
-                  linking code. Until then, nothing can be scanned from this
-                  screen.
-                </Text>
-              </>
-            )}
-          </View>
-        </View>
+              </View>
+            ) : null}
+          </ParentOnboardingStepLayout>
 
-        {!awaitingSession ? (
-          <View style={styles.footer}>
-            <AuthButton onPress={openAuthSheet} title="Generate QR code" />
-          </View>
-        ) : null}
+          {!awaitingSession ? (
+            <View style={styles.footer}>
+              <AuthButton onPress={openAuthSheet} title="Generate QR code" />
+            </View>
+          ) : null}
+        </ScrollView>
       </SafeAreaView>
 
       <Modal
@@ -550,35 +528,12 @@ function createStyles(colors: ColorPalette) {
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.md,
     },
-    backButton: {
-      alignSelf: 'flex-start',
-      marginBottom: spacing.xs,
-      marginLeft: -spacing.xs,
-    },
-    qrStage: {
-      alignItems: 'center',
+    scroll: {
       flex: 1,
-      gap: spacing.sm,
-      paddingTop: spacing.md,
     },
-    stageEyebrow: {
-      ...typography.caption,
-      color: colors.text.brand,
-      fontWeight: '700',
-      letterSpacing: 0.6,
-    },
-    stageTitle: {
-      ...typography.title,
-      color: colors.text.primary,
-      fontSize: 28,
-      textAlign: 'center',
-    },
-    stageSubtitle: {
-      ...typography.body,
-      color: colors.text.secondary,
-      opacity: 0.72,
-      paddingHorizontal: spacing.md,
-      textAlign: 'center',
+    scrollContent: {
+      flexGrow: 1,
+      paddingBottom: spacing.md,
     },
     qrCard: {
       alignItems: 'center',
@@ -587,23 +542,12 @@ function createStyles(colors: ColorPalette) {
       borderRadius: radii.lg,
       borderWidth: 1,
       justifyContent: 'center',
-      marginTop: spacing.lg,
-      minHeight: 240,
-      padding: spacing.xl,
+      minHeight: 160,
+      padding: spacing.lg,
       width: '100%',
-      maxWidth: 320,
     },
     qrCardActive: {
       borderColor: colors.brand.teal,
-    },
-    lockBadge: {
-      alignItems: 'center',
-      backgroundColor: colors.background.accent,
-      borderRadius: 28,
-      height: 56,
-      justifyContent: 'center',
-      marginBottom: spacing.md,
-      width: 56,
     },
     loader: {
       marginBottom: spacing.md,
@@ -614,13 +558,8 @@ function createStyles(colors: ColorPalette) {
       fontSize: 16,
       textAlign: 'center',
     },
-    qrHintSecondary: {
-      ...typography.caption,
-      color: colors.text.secondary,
-      marginTop: spacing.sm,
-      textAlign: 'center',
-    },
     footer: {
+      marginTop: 'auto',
       paddingBottom: spacing.md,
       paddingTop: spacing.lg,
     },

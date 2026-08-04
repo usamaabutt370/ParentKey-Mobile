@@ -72,7 +72,7 @@ class ParentKeySyncForegroundService : Service() {
     val notification: Notification =
       NotificationCompat.Builder(this, CHANNEL_ID)
         .setContentTitle("ParentKey protection")
-        .setContentText("Syncing parent rules in the background")
+        .setContentText("Keeping parent controls and usage sync active")
         .setSmallIcon(android.R.drawable.ic_lock_lock)
         .setContentIntent(pending)
         .setOngoing(true)

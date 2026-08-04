@@ -3,6 +3,7 @@ package com.parentkey
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
+import android.util.Base64
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
@@ -19,6 +20,7 @@ import java.nio.charset.StandardCharsets
  */
 object ParentKeyRemoteSync {
   private const val TAG = "ParentKeyRemoteSync"
+  private const val EXPIRY_LEEWAY_SECONDS = 5 * 60L
 
   data class Result(
     val ok: Boolean,
@@ -45,15 +47,30 @@ object ParentKeyRemoteSync {
     } catch (error: Exception) {
       Log.e(TAG, "Remote sync failed", error)
       Result(ok = false, message = error.message)
+    } finally {
+      // Usage upload rides the same background wakeups but must not be skipped
+      // when fetching rules fails. Throttled inside ParentKeyUsageSync.
+      try {
+        ParentKeyUsageSync.syncNow(context)
+      } catch (error: Exception) {
+        Log.w(TAG, "Usage sync failed", error)
+      }
     }
   }
 
-  private fun ensureFreshSession(
+  internal fun ensureFreshSession(
     context: Context,
     creds: ParentKeySyncCredentials.Snapshot,
   ): ParentKeySyncCredentials.Snapshot? {
     // Refresh when we have a refresh token; ignore failures and try with current access token.
     if (creds.refreshToken.isBlank()) {
+      return creds
+    }
+
+    // Supabase rotates refresh tokens. Refreshing on every sync would invalidate the
+    // token the React Native session still holds and sign the child back to QR pairing,
+    // so only refresh once the access token is actually close to expiring.
+    if (!accessTokenExpiresSoon(creds.accessToken)) {
       return creds
     }
 
@@ -82,6 +99,30 @@ object ParentKeyRemoteSync {
       creds
     }
   }
+
+  /** True when the JWT expires within [EXPIRY_LEEWAY_SECONDS], or cannot be parsed. */
+  private fun accessTokenExpiresSoon(accessToken: String): Boolean {
+    val expiresAt = readJwtExpiry(accessToken) ?: return true
+    val nowSeconds = System.currentTimeMillis() / 1000
+    return expiresAt - nowSeconds <= EXPIRY_LEEWAY_SECONDS
+  }
+
+  private fun readJwtExpiry(accessToken: String): Long? =
+    try {
+      val payload = accessToken.split(".").getOrNull(1)
+      if (payload.isNullOrBlank()) {
+        null
+      } else {
+        val decoded =
+          String(
+            Base64.decode(payload, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP),
+            StandardCharsets.UTF_8,
+          )
+        JSONObject(decoded).optLong("exp", 0L).takeIf { it > 0L }
+      }
+    } catch (_: Exception) {
+      null
+    }
 
   private fun fetchBlockedPackages(creds: ParentKeySyncCredentials.Snapshot): Set<String> {
     val url =

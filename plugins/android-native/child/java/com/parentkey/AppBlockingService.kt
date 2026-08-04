@@ -18,11 +18,44 @@ class AppBlockingService : AccessibilityService() {
   private var cachedLauncherPackages: Set<String>? = null
   private var lastHandledPackage: String? = null
   private var lastHandledAtMs: Long = 0L
+  private val usageSyncRunnable =
+    Runnable {
+      Thread {
+        ParentKeyUsageSync.syncNow(applicationContext)
+      }.start()
+    }
+
+  /**
+   * App switches alone are not enough: a child can stay inside one app for a long time
+   * and never produce another accessibility event. This keeps uploading during that.
+   */
+  private val usageTickRunnable =
+    object : Runnable {
+      override fun run() {
+        Thread {
+          ParentKeyUsageSync.syncNow(applicationContext)
+        }.start()
+        mainHandler.postDelayed(this, USAGE_TICK_INTERVAL_MS)
+      }
+    }
 
   override fun onServiceConnected() {
     super.onServiceConnected()
     cachedLauncherPackages = null
     AppBlockingCoordinator.reset()
+
+    // Accessibility rebinds after reboot / force stop, so use it to bring the rest of
+    // the background sync stack back up too.
+    if (ParentKeySyncCredentials.read(applicationContext) != null) {
+      ParentKeySyncForegroundService.start(applicationContext)
+    }
+
+    Thread {
+      ParentKeyUsageSync.syncNow(applicationContext, force = true)
+    }.start()
+
+    mainHandler.removeCallbacks(usageTickRunnable)
+    mainHandler.postDelayed(usageTickRunnable, USAGE_TICK_INTERVAL_MS)
   }
 
   override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -46,6 +79,8 @@ class AppBlockingService : AccessibilityService() {
   }
 
   override fun onDestroy() {
+    mainHandler.removeCallbacks(usageSyncRunnable)
+    mainHandler.removeCallbacks(usageTickRunnable)
     AppBlockingCoordinator.reset()
     super.onDestroy()
   }
@@ -59,8 +94,14 @@ class AppBlockingService : AccessibilityService() {
 
     if (isHomeOrLauncher(packageName)) {
       lastHandledPackage = null
+      // Leaving an app / returning home — good moment to push usage.
+      scheduleUsageSync()
       return
     }
+
+    // Any real app switch while Accessibility is alive: keep usage fresh
+    // even when the RN UI process would otherwise be idle/killed.
+    scheduleUsageSync()
 
     if (AppBlockingCoordinator.shouldSuppressBlocking()) {
       return
@@ -108,6 +149,12 @@ class AppBlockingService : AccessibilityService() {
     )
   }
 
+  private fun scheduleUsageSync() {
+    // Coalesce bursty accessibility events; ParentKeyUsageSync also throttles uploads.
+    mainHandler.removeCallbacks(usageSyncRunnable)
+    mainHandler.postDelayed(usageSyncRunnable, 1_500L)
+  }
+
   private fun isHomeOrLauncher(packageName: String): Boolean {
     val launchers =
       cachedLauncherPackages ?: loadLauncherPackages().also { cachedLauncherPackages = it }
@@ -126,5 +173,9 @@ class AppBlockingService : AccessibilityService() {
     val resolved =
       packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
     return resolved.mapNotNull { it.activityInfo?.packageName }.toSet()
+  }
+
+  companion object {
+    private const val USAGE_TICK_INTERVAL_MS = 2 * 60 * 1000L
   }
 }

@@ -223,7 +223,7 @@ function createStyles(accent: string) {
       width: 220,
     },
     mapGrid: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 6,

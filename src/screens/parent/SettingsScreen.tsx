@@ -12,13 +12,6 @@ import { radii, spacing, typography } from '../../theme';
 /** Matches ParentTabNavigator tab bar content height (excluding safe-area inset). */
 const TAB_BAR_CONTENT_HEIGHT = 56;
 
-const SETTINGS_ITEMS = [
-  { id: 'notifications', label: 'Notifications', description: 'Alerts and limit warnings' },
-  { id: 'subscription', label: 'Subscription', description: 'Manage your plan' },
-  { id: 'permissions', label: 'Permissions', description: 'Device and app access' },
-  { id: 'help', label: 'Help & support', description: 'FAQs and contact' },
-];
-
 export function ParentSettingsScreen() {
   const screenStyles = useScreenStyles();
   const { colors } = useTheme();
@@ -103,15 +96,6 @@ export function ParentSettingsScreen() {
           variant="secondary"
         />
       </View>
-
-      <View style={styles.menu}>
-        {SETTINGS_ITEMS.map(item => (
-          <View key={item.id} style={styles.menuItem}>
-            <Text style={styles.menuLabel}>{item.label}</Text>
-            <Text style={styles.menuDescription}>{item.description}</Text>
-          </View>
-        ))}
-      </View>
     </ScreenLayout>
   );
 }
@@ -156,25 +140,6 @@ function createStyles(colors: ColorPalette, bottomInset: number) {
       fontSize: 18,
     },
     profileMeta: {
-      ...typography.caption,
-      color: colors.text.secondary,
-    },
-    menu: {
-      gap: spacing.sm,
-    },
-    menuItem: {
-      backgroundColor: colors.input.background,
-      borderColor: colors.border.default,
-      borderRadius: radii.lg,
-      borderWidth: 1,
-      gap: spacing.xs,
-      padding: spacing.md,
-    },
-    menuLabel: {
-      ...typography.label,
-      color: colors.text.primary,
-    },
-    menuDescription: {
       ...typography.caption,
       color: colors.text.secondary,
     },

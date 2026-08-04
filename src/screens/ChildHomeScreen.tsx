@@ -317,7 +317,7 @@ export function ChildHomeScreen({ navigation }: Props) {
 
         <AuthButton
           onPress={() => void handleSignOut()}
-          title="Unlink device"
+          title="Sign out of this device"
           variant="secondary"
         />
 

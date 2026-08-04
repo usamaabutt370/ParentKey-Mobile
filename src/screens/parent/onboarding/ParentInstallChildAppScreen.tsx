@@ -2,7 +2,6 @@ import React, { useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthButton, ScreenLayout } from '../../../components';
-import { InfoTipCard } from '../../../components/parent';
 import { PARENT_ONBOARDING_TOTAL_STEPS } from '../../../constants/parentOnboarding';
 import { useTheme } from '../../../context/ThemeContext';
 import { setPreAuthSetupRoute } from '../../../lib/pendingParentAction';
@@ -66,34 +65,29 @@ export function ParentInstallChildAppScreen({ navigation }: Props) {
   return (
     <ScreenLayout
       safeAreaEdges={['top', 'left', 'right', 'bottom']}
+      scrollable
       contentStyle={styles.content}>
-      <View style={styles.root}>
-        <View style={styles.setupContent}>
-          <ParentOnboardingStepLayout
-            currentStep={2}
-            icon="⬇️"
-            onBack={handleBack}
-            subtitle="Install the child app before linking. Next you’ll generate a QR code to connect their phone."
-            title="Install ParentKey Child"
-            totalSteps={PARENT_ONBOARDING_TOTAL_STEPS}>
-            <View style={styles.list}>
-              {INSTALL_STEPS.map((step, index) => (
-                <View key={step} style={styles.row}>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{index + 1}</Text>
-                  </View>
-                  <Text style={styles.listItem}>{step}</Text>
-                </View>
-              ))}
+      <ParentOnboardingStepLayout
+        currentStep={2}
+        image={require('../../../../assets/onboarding/install-child-app.png')}
+        onBack={handleBack}
+        subtitle="Install the child app before linking. Next you’ll generate a QR code to connect their phone."
+        title="Install ParentKey Child"
+        totalSteps={PARENT_ONBOARDING_TOTAL_STEPS}>
+        <View style={styles.list}>
+          {INSTALL_STEPS.map((step, index) => (
+            <View key={step} style={styles.row}>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{index + 1}</Text>
+              </View>
+              <Text style={styles.listItem}>{step}</Text>
             </View>
-
-            <InfoTipCard message="Keep both phones nearby. Linking usually takes under a minute once ParentKey Child is installed." />
-          </ParentOnboardingStepLayout>
+          ))}
         </View>
+      </ParentOnboardingStepLayout>
 
-        <View style={styles.footer}>
-          <AuthButton onPress={handleLinkChild} title="Link a child" />
-        </View>
+      <View style={styles.footer}>
+        <AuthButton onPress={handleLinkChild} title="Link a child" />
       </View>
     </ScreenLayout>
   );
@@ -102,20 +96,7 @@ export function ParentInstallChildAppScreen({ navigation }: Props) {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     content: {
-      flex: 1,
-    },
-    root: {
-      flex: 1,
-    },
-    setupContent: {
-      flex: 1,
-      paddingBottom: 160,
-    },
-    footer: {
-      bottom: 0,
-      left: 0,
-      position: 'absolute',
-      right: 0,
+      flexGrow: 1,
     },
     list: {
       gap: spacing.md,
@@ -142,6 +123,10 @@ function createStyles(colors: ColorPalette) {
       color: colors.text.primary,
       flex: 1,
       paddingTop: 2,
+    },
+    footer: {
+      marginTop: 'auto',
+      paddingTop: spacing.lg,
     },
   });
 }

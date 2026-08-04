@@ -3,11 +3,9 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import QRCode from 'react-native-qrcode-svg';
 import { AuthButton, ScreenLayout } from '../../../components';
-import { InfoTipCard } from '../../../components/parent';
 import { PARENT_ONBOARDING_TOTAL_STEPS } from '../../../constants/parentOnboarding';
 import { buildPairingQrValue } from '../../../constants/pairing';
 import { useTheme } from '../../../context/ThemeContext';
-import { useExpiryCountdown } from '../../../hooks/useExpiryCountdown';
 import {
   clearActivePairingSession,
   createPairingSession,
@@ -36,7 +34,6 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
   const [statusMessage, setStatusMessage] = useState(
     'Waiting for your child to scan this code…',
   );
-  const expiryLabel = useExpiryCountdown(session?.expiresAt);
 
   useEffect(() => {
     let cancelled = false;
@@ -158,7 +155,6 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
       contentStyle={styles.content}>
       <ParentOnboardingStepLayout
         currentStep={3}
-        icon="🔳"
         onSkip={() => void handleSkip()}
         skipLabel="Skip"
         subtitle="Open ParentKey Child on the other phone and scan this QR code."
@@ -185,9 +181,6 @@ export function ParentShowPairingQrScreen({ navigation }: Props) {
             </View>
 
             <Text style={styles.status}>{statusMessage}</Text>
-            <Text style={styles.expiry}>{expiryLabel}</Text>
-
-            <InfoTipCard message="After scanning, your child will complete consent, profile, and permissions on their phone." />
 
             <AuthButton
               onPress={() => void handleRefresh()}
@@ -221,16 +214,12 @@ function createStyles(colors: ColorPalette) {
       borderRadius: radii.lg,
       borderWidth: 1,
       padding: spacing.lg,
+      marginBottom: spacing.xxl,
     },
     status: {
       ...typography.label,
       color: colors.text.primary,
       fontSize: 16,
-      textAlign: 'center',
-    },
-    expiry: {
-      ...typography.caption,
-      color: colors.text.secondary,
       textAlign: 'center',
     },
     errorText: {

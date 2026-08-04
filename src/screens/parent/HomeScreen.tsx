@@ -1,225 +1,251 @@
-import React, { useMemo } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import {
-  ChildCard,
-  RecentAlertsList,
-  SectionHeader,
-  StatCard,
-  TopAppsReport,
-  WeeklyUsageChart,
+  ChildPickerSheet,
+  ChildSelectorChip,
+  HomeActivitySheet,
+  HOME_ACTIVITY_SHEET_PEEK,
+  UsagePeriodCarousel,
 } from '../../components/parent';
 import { ScreenLayout, useScreenStyles } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useParentChildren } from '../../hooks/useParentChildren';
 import { useParentActivityDashboard } from '../../hooks/useParentActivityDashboard';
+import { getChildDisplayName, setChildUninstallAllowed } from '../../lib/children';
 import type { ParentTabParamList } from '../../navigation/types';
 import type { ColorPalette } from '../../theme/colors';
-import { radii, spacing, typography } from '../../theme';
+import { spacing, typography } from '../../theme';
 
 type HomeNavigation = BottomTabNavigationProp<ParentTabParamList, 'Home'>;
 
 export function ParentHomeScreen() {
   const navigation = useNavigation<HomeNavigation>();
+  const isFocused = useIsFocused();
   const screenStyles = useScreenStyles();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { session } = useAuth();
-  const { children, loading: childrenLoading } = useParentChildren();
   const {
-    summary,
-    stats,
-    topApps,
-    weeklyUsage,
-    childSummaries,
-    alerts,
+    children,
+    selectedChild,
+    selectedChildId,
+    setSelectedChildId,
+    selectedSummary: summary,
+    selectedStats: stats,
+    selectedTopApps: topApps,
+    selectedPeriodCards,
+    selectedBlockedRules,
+    selectedAppIcons,
+    patchChildUninstallAllowed,
     loading: activityLoading,
   } = useParentActivityDashboard();
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [updatingUninstall, setUpdatingUninstall] = useState(false);
   const firstName = session?.user.user_metadata?.first_name;
+  const parentName =
+    typeof firstName === 'string' && firstName.trim().length > 0
+      ? firstName.trim()
+      : null;
+  const selectedName = selectedChild
+    ? getChildDisplayName(selectedChild)
+    : null;
+  const usageEmptyHint =
+    Platform.OS === 'ios'
+      ? 'App usage sync is not available on iOS. Use Screen Time on the child device for limits and blocking.'
+      : 'Usage data appears after the child enables Usage access and syncs.';
 
-  const summaryByChildId = useMemo(
-    () => new Map(childSummaries.map(item => [item.childId, item])),
-    [childSummaries],
+  const handleManageBlockedApps = useCallback(() => {
+    if (!selectedChildId) {
+      navigation.navigate('Controls');
+      return;
+    }
+
+    navigation.navigate('Controls', {
+      screen: 'SelectApps',
+      params: { mode: 'block', childId: selectedChildId },
+    });
+  }, [navigation, selectedChildId]);
+
+  const handleToggleUninstallAllowed = useCallback(
+    (allowed: boolean) => {
+      const parentId = session?.user.id;
+      if (!parentId || !selectedChildId || !selectedChild) {
+        return;
+      }
+
+      const childId = selectedChildId;
+      const previous = selectedChild.uninstallAllowed;
+
+      const applyChange = async () => {
+        setUpdatingUninstall(true);
+        patchChildUninstallAllowed(childId, allowed);
+
+        const result = await setChildUninstallAllowed({
+          parentId,
+          childId,
+          allowed,
+        });
+
+        setUpdatingUninstall(false);
+
+        if (!result.ok) {
+          patchChildUninstallAllowed(childId, previous);
+          Alert.alert('Could not update setting', result.message);
+        }
+      };
+
+      if (allowed) {
+        Alert.alert(
+          'Allow uninstall?',
+          'This lets the child device turn off uninstall protection so ParentKey Child can be removed. Turn this off again when you want protection restored.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Allow',
+              style: 'destructive',
+              onPress: () => {
+                void applyChange();
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      void applyChange();
+    },
+    [
+      patchChildUninstallAllowed,
+      selectedChild,
+      selectedChildId,
+      session?.user.id,
+    ],
   );
 
   return (
-    <ScreenLayout
-      safeAreaEdges={['top', 'left', 'right']}
-      scrollable
-      contentStyle={styles.content}>
-      <View style={screenStyles.header}>
-        <Text style={screenStyles.brand}>ParentKey</Text>
-        <Text style={[screenStyles.title, styles.greeting]}>
-          {firstName ? `Hi, ${firstName}` : 'Dashboard'}
-        </Text>
-        <Text style={screenStyles.subtitle}>
-          Here&apos;s how your family is doing today
-        </Text>
-      </View>
-
-      <View style={styles.statsRow}>
-        <StatCard
-          label="Screen time"
-          value={activityLoading ? '...' : summary.weekLabel}
-        />
-        <StatCard
-          accent={colors.brand.tealLight}
-          label="Active rules"
-          value={activityLoading ? '...' : String(stats.activeRulesCount)}
-        />
-        <StatCard
-          accent={colors.error}
-          label="Alerts"
-          value={activityLoading ? '...' : String(stats.alertCount)}
-        />
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeader
-          actionLabel="Full report"
-          onActionPress={() => navigation.navigate('Reports')}
-          title="Today's usage"
-        />
-        <View style={styles.reportSummaryRow}>
-          <View style={styles.reportSummaryCard}>
-            <Text style={styles.reportSummaryValue}>
-              {activityLoading ? '...' : summary.todayLabel}
-            </Text>
-            <Text style={styles.reportSummaryLabel}>Today</Text>
-          </View>
-          <View style={styles.reportSummaryCard}>
-            <Text style={styles.reportSummaryValue}>
-              {activityLoading ? '...' : summary.weekLabel}
-            </Text>
-            <Text style={styles.reportSummaryLabel}>This week</Text>
+    <View style={styles.root}>
+      <ScreenLayout
+        safeAreaEdges={['top', 'left', 'right']}
+        scrollable
+        contentStyle={styles.content}
+        style={styles.layout}>
+        <View style={styles.topBar}>
+          {children.length > 0 ? (
+            <View style={styles.childSlot}>
+              <ChildSelectorChip
+                child={selectedChild}
+                disabled={activityLoading && !selectedChild}
+                onPress={() => setPickerVisible(true)}
+              />
+            </View>
+          ) : (
+            <View style={styles.topBarSpacer} />
+          )}
+          <View style={styles.brandBlock}>
+            <Text style={[screenStyles.brand, styles.brandText]}>ParentKey</Text>
+            {parentName ? (
+              <Text numberOfLines={1} style={styles.parentName}>
+                {parentName}
+              </Text>
+            ) : null}
           </View>
         </View>
-        {topApps.length > 0 ? (
-          <TopAppsReport apps={topApps} />
-        ) : (
-          <Text style={styles.emptyUsageText}>
-            {Platform.OS === 'ios'
-              ? 'App usage sync is not available on iOS. Use Screen Time on the child device for limits and blocking.'
-              : 'Usage data appears after the child enables Usage access and syncs.'}
-          </Text>
-        )}
-      </View>
 
-      <View style={styles.section}>
-        <SectionHeader title="Weekly overview" />
-        {weeklyUsage.every(day => day.hours === 0) ? (
-          <Text style={styles.emptyUsageText}>
-            {Platform.OS === 'ios'
-              ? 'Weekly usage sync is not available for child iPhones.'
-              : 'No weekly usage synced yet.'}
-          </Text>
-        ) : (
-          <WeeklyUsageChart data={weeklyUsage} />
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeader title="Recent alerts" />
         {activityLoading ? (
           <ActivityIndicator color={colors.brand.tealLight} size="small" />
         ) : (
-          <RecentAlertsList alerts={alerts} />
+          <UsagePeriodCarousel
+            cards={selectedPeriodCards}
+            emptyHint={usageEmptyHint}
+          />
         )}
-      </View>
+      </ScreenLayout>
 
-      <View style={styles.section}>
-        <SectionHeader
-          actionLabel="See all"
-          onActionPress={() => navigation.navigate('Children')}
-          title="Your children"
-        />
-        <View style={styles.childList}>
-          {childrenLoading ? (
-            <ActivityIndicator color={colors.brand.tealLight} size="small" />
-          ) : children.length === 0 ? (
-            <Text style={styles.emptyChildrenText}>
-              No children linked yet. Tap See all to add one.
-            </Text>
-          ) : (
-            children.map(child => {
-              const activity = summaryByChildId.get(child.id);
+      <HomeActivitySheet
+        appIcons={selectedAppIcons}
+        blockedRules={selectedBlockedRules}
+        childName={selectedName}
+        loading={activityLoading}
+        screenFocused={isFocused}
+        showDeviceProtection={Boolean(selectedChild)}
+        stats={stats}
+        summary={summary}
+        topApps={topApps}
+        uninstallAllowed={selectedChild?.uninstallAllowed === true}
+        uninstallUpdating={updatingUninstall}
+        onManageBlockedApps={handleManageBlockedApps}
+        onToggleUninstallAllowed={handleToggleUninstallAllowed}
+      />
 
-              return (
-                <ChildCard
-                  child={child}
-                  deviceStatus={activity?.deviceStatus}
-                  key={child.id}
-                  onPress={() =>
-                    navigation.navigate('Children', {
-                      screen: 'ChildDetail',
-                      params: { childId: child.id },
-                    })
-                  }
-                  screenTimeToday={
-                    activity && activity.todaySeconds > 0
-                      ? activity.todayLabel
-                      : undefined
-                  }
-                />
-              );
-            })
-          )}
-        </View>
-      </View>
-    </ScreenLayout>
+      <ChildPickerSheet
+        childrenList={children}
+        onAddChild={() => navigation.navigate('Children')}
+        onClose={() => setPickerVisible(false)}
+        onSelect={setSelectedChildId}
+        selectedChildId={selectedChildId}
+        visible={pickerVisible}
+      />
+    </View>
   );
 }
 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    content: {
-      gap: spacing.xl,
-    },
-    greeting: {
-      fontSize: 28,
-    },
-    statsRow: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-    },
-    section: {
-      gap: spacing.md,
-    },
-    reportSummaryRow: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-    },
-    reportSummaryCard: {
-      backgroundColor: colors.input.background,
-      borderColor: colors.border.default,
-      borderRadius: radii.lg,
-      borderWidth: 1,
+    root: {
       flex: 1,
-      gap: spacing.xs,
-      padding: spacing.md,
     },
-    reportSummaryValue: {
-      ...typography.label,
-      color: colors.text.primary,
-      fontSize: 16,
-      fontWeight: '700',
+    layout: {
+      paddingBottom: 0,
+      paddingTop: spacing.xs,
     },
-    reportSummaryLabel: {
-      ...typography.caption,
-      color: colors.text.secondary,
-    },
-    emptyUsageText: {
-      ...typography.body,
-      color: colors.text.secondary,
-    },
-    childList: {
+    content: {
       gap: spacing.sm,
+      // Keep the usage card above the always-visible peek sheet.
+      paddingBottom: HOME_ACTIVITY_SHEET_PEEK + spacing.lg,
+      paddingTop: 0,
     },
-    emptyChildrenText: {
-      ...typography.body,
-      color: colors.text.secondary,
+    topBar: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: spacing.sm,
+      justifyContent: 'space-between',
+      marginBottom: 0,
+    },
+    topBarSpacer: {
+      flex: 1,
+    },
+    childSlot: {
+      flex: 1,
+      minWidth: 0,
+      paddingRight: spacing.sm,
+    },
+    brandBlock: {
+      alignItems: 'flex-end',
+      flexShrink: 0,
+      gap: 0,
+      maxWidth: '42%',
+    },
+    brandText: {
+      fontSize: 22,
+      lineHeight: 26,
+      textAlign: 'right',
+    },
+    parentName: {
+      ...typography.caption,
+      color: colors.text.primary,
+      fontSize: 13,
+      fontWeight: '600',
+      lineHeight: 16,
+      textAlign: 'right',
     },
   });
 }

@@ -173,7 +173,7 @@ export function SelectAppsScreen({ navigation, route }: Props) {
         {
           text: 'OK',
           onPress: () => {
-            navigation.navigate('ControlsList');
+            navigation.getParent()?.navigate('Home');
           },
         },
       ],

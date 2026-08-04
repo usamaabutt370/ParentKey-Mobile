@@ -140,6 +140,33 @@ class UsageStatsModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  @ReactMethod
+  fun getHourlyAppUsage(promise: Promise) {
+    try {
+      if (!hasUsageAccess()) {
+        promise.reject(
+          "USAGE_ACCESS_DENIED",
+          "Usage access is not granted. Enable ParentKey in Usage access settings.",
+        )
+        return
+      }
+
+      val records = WritableNativeArray()
+      for (record in ParentKeyUsageCollector.collectTodayHourly(reactApplicationContext)) {
+        val row = WritableNativeMap()
+        row.putString("packageName", record.packageName)
+        row.putString("appName", record.appName)
+        row.putString("usageDate", record.usageDate)
+        row.putInt("hour", record.hour)
+        row.putDouble("foregroundSeconds", record.foregroundSeconds.toDouble())
+        records.pushMap(row)
+      }
+      promise.resolve(records)
+    } catch (error: Exception) {
+      promise.reject("USAGE_STATS_HOURLY_ERROR", error.message, error)
+    }
+  }
+
   private fun hasUsageAccess(): Boolean {
     val appOps =
       reactApplicationContext.getSystemService(AppOpsManager::class.java)
@@ -177,34 +204,16 @@ class UsageStatsModule(reactContext: ReactApplicationContext) :
     startMs: Long,
     endMs: Long,
     maxDurationMs: Long,
-  ): Map<String, Long> {
-    val stats =
-      usageStatsManager.queryUsageStats(
-        UsageStatsManager.INTERVAL_DAILY,
-        startMs,
-        endMs,
-      ) ?: return emptyMap()
-
-    val usage = linkedMapOf<String, Long>()
-
-    for (stat in stats) {
-      val packageName = stat.packageName ?: continue
-      if (shouldExcludePackage(packageManager, packageName)) {
-        continue
-      }
-
-      val foregroundMs =
-        stat.totalTimeInForeground.coerceAtMost(maxDurationMs)
-
-      if (foregroundMs <= 0L) {
-        continue
-      }
-
-      usage[packageName] = foregroundMs
-    }
-
-    return usage
-  }
+  ): Map<String, Long> =
+    // Shared with native background upload so both paths report the same totals,
+    // including the session currently in the foreground.
+    ParentKeyUsageCollector.aggregateUsageMs(
+      usageStatsManager,
+      packageManager,
+      startMs,
+      endMs,
+      maxDurationMs,
+    )
 
   private fun shouldExcludePackage(
     packageManager: PackageManager,
