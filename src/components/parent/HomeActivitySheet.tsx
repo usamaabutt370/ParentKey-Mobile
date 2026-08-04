@@ -6,32 +6,40 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RecentAlertsList } from './RecentAlertsList';
+import { AppIcon } from '../AppIcon';
+import { AuthButton } from '../AuthButton';
 import { useTheme } from '../../context/ThemeContext';
-import type { ActivityAlert, ParentActivityStats } from '../../types/parentActivity';
+import type { AppBlockRule } from '../../lib/appRules';
+import type { ParentActivityStats } from '../../types/parentActivity';
 import type { UsageReportSummary, UsageTopApp } from '../../types/appUsage';
 import type { ColorPalette } from '../../theme/colors';
 import { radii, spacing, typography } from '../../theme';
 
 /** Visible height when the sheet is parked (peek). */
-export const HOME_ACTIVITY_SHEET_PEEK = 148;
+export const HOME_ACTIVITY_SHEET_PEEK = 100;
 
 type Props = {
   childName: string | null;
   summary: UsageReportSummary;
   stats: ParentActivityStats;
   topApps: UsageTopApp[];
-  alerts: ActivityAlert[];
+  blockedRules: AppBlockRule[];
+  appIcons?: Map<string, string | null>;
   loading?: boolean;
-  onOpenReports: () => void;
-  onOpenChildren: () => void;
-  onOpenRules: () => void;
+  /** When false (e.g. left Home), collapse the sheet to peek. */
+  screenFocused?: boolean;
+  uninstallAllowed?: boolean;
+  uninstallUpdating?: boolean;
+  showDeviceProtection?: boolean;
+  onToggleUninstallAllowed?: (allowed: boolean) => void;
+  onManageBlockedApps: () => void;
 };
 
 export function HomeActivitySheet({
@@ -39,11 +47,15 @@ export function HomeActivitySheet({
   summary,
   stats,
   topApps,
-  alerts,
+  blockedRules,
+  appIcons,
   loading = false,
-  onOpenReports,
-  onOpenChildren,
-  onOpenRules,
+  screenFocused = true,
+  uninstallAllowed = false,
+  uninstallUpdating = false,
+  showDeviceProtection = false,
+  onToggleUninstallAllowed,
+  onManageBlockedApps,
 }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -62,15 +74,25 @@ export function HomeActivitySheet({
   peekedRef.current = peekedHeight;
   expandedRef.current = expandedHeight;
   const [expanded, setExpanded] = useState(false);
+  const [showAllBlocked, setShowAllBlocked] = useState(false);
+  const blockedPreviewLimit = 3;
+  const visibleBlockedRules = showAllBlocked
+    ? blockedRules
+    : blockedRules.slice(0, blockedPreviewLimit);
+  const hasMoreBlocked = blockedRules.length > blockedPreviewLimit;
 
   useEffect(() => {
     heightAnim.setValue(peekedHeight);
     setExpanded(false);
+    setShowAllBlocked(false);
   }, [peekedHeight, heightAnim]);
 
   const animateTo = useCallback(
     (toValue: number, nextExpanded: boolean) => {
       setExpanded(nextExpanded);
+      if (!nextExpanded) {
+        setShowAllBlocked(false);
+      }
       Animated.spring(heightAnim, {
         toValue,
         useNativeDriver: false,
@@ -80,6 +102,15 @@ export function HomeActivitySheet({
     },
     [heightAnim],
   );
+
+  useEffect(() => {
+    if (!screenFocused) {
+      heightAnim.stopAnimation();
+      heightAnim.setValue(peekedHeight);
+      setExpanded(false);
+      setShowAllBlocked(false);
+    }
+  }, [screenFocused, peekedHeight, heightAnim]);
 
   const panResponder = useMemo(
     () =>
@@ -95,7 +126,6 @@ export function HomeActivitySheet({
         onPanResponderMove: (_event, gesture) => {
           const min = peekedRef.current;
           const max = expandedRef.current;
-          // Drag up (negative dy) grows the sheet.
           const next = Math.min(
             max,
             Math.max(min, dragStartHeight.current - gesture.dy),
@@ -148,23 +178,6 @@ export function HomeActivitySheet({
                   : `Today ${summary.todayLabel} · Week ${summary.weekLabel}`}
               </Text>
             </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={expanded ? 'Collapse sheet' : 'Expand sheet'}
-              hitSlop={10}
-              onPress={() =>
-                animateTo(expanded ? peekedHeight : expandedHeight, !expanded)
-              }
-              style={({ pressed }) => [
-                styles.expandChip,
-                pressed && styles.expandChipPressed,
-              ]}>
-              <Feather
-                color={colors.text.brand}
-                name={expanded ? 'chevron-down' : 'chevron-up'}
-                size={18}
-              />
-            </Pressable>
           </View>
         </View>
 
@@ -222,70 +235,88 @@ export function HomeActivitySheet({
             </Text>
           )}
 
-          <Text style={styles.sectionLabel}>Quick actions</Text>
-          <View style={styles.actions}>
-            <ActionRow
-              colors={colors}
-              icon="bar-chart-2"
-              label="Full report"
-              onPress={onOpenReports}
-              styles={styles}
-            />
-            <ActionRow
-              colors={colors}
-              icon="slash"
-              label="Manage rules"
-              onPress={onOpenRules}
-              styles={styles}
-            />
-            <ActionRow
-              colors={colors}
-              icon="users"
-              label="Children"
-              onPress={onOpenChildren}
-              styles={styles}
-            />
-          </View>
+          {showDeviceProtection ? (
+            <>
+              <Text style={styles.sectionLabel}>Device protection</Text>
+              <View style={styles.protectionCard}>
+                <View style={styles.protectionCopy}>
+                  <Text style={styles.protectionTitle}>Allow app uninstall</Text>
+                  <Text style={styles.protectionBody}>
+                    When on, the child device can deactivate Device Admin and
+                    uninstall ParentKey Child.
+                  </Text>
+                </View>
+                <Switch
+                  disabled={uninstallUpdating || !onToggleUninstallAllowed}
+                  onValueChange={value => onToggleUninstallAllowed?.(value)}
+                  trackColor={{
+                    false: colors.border.default,
+                    true: colors.brand.teal,
+                  }}
+                  value={uninstallAllowed}
+                />
+              </View>
+            </>
+          ) : null}
 
-          <Text style={styles.sectionLabel}>Recent alerts</Text>
+          <Text style={styles.sectionLabel}>Blocked apps</Text>
+          <AuthButton
+            onPress={onManageBlockedApps}
+            title={
+              blockedRules.length === 0 ? 'Block apps' : 'Manage blocked apps'
+            }
+            variant={blockedRules.length === 0 ? 'primary' : 'secondary'}
+          />
           {loading ? (
-            <Text style={styles.emptyHint}>Loading alerts…</Text>
+            <Text style={styles.emptyHint}>Loading blocked apps…</Text>
+          ) : blockedRules.length === 0 ? (
+            <Text style={styles.emptyHint}>
+              No apps are blocked for this child yet.
+            </Text>
           ) : (
-            <RecentAlertsList alerts={alerts} />
+            <View style={styles.appList}>
+              {visibleBlockedRules.map(rule => {
+                const displayName = rule.appName ?? rule.packageName;
+                return (
+                  <View key={rule.id} style={styles.blockedRow}>
+                    <AppIcon
+                      iconBase64={appIcons?.get(rule.packageName)}
+                      name={displayName}
+                      packageName={rule.packageName}
+                      size={40}
+                    />
+                    <View style={styles.blockedInfo}>
+                      <Text numberOfLines={1} style={styles.blockedName}>
+                        {displayName}
+                      </Text>
+                      <Text numberOfLines={1} style={styles.blockedPackage}>
+                        {rule.packageName}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+              {hasMoreBlocked ? (
+                <Pressable
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  onPress={() => setShowAllBlocked(current => !current)}
+                  style={({ pressed }) => [
+                    styles.showAllButton,
+                    pressed && styles.showAllButtonPressed,
+                  ]}>
+                  <Text style={styles.showAllText}>
+                    {showAllBlocked
+                      ? 'Show less'
+                      : `Show all (${blockedRules.length})`}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
           )}
         </ScrollView>
       </Animated.View>
     </View>
-  );
-}
-
-function ActionRow({
-  colors,
-  icon,
-  label,
-  onPress,
-  styles,
-}: {
-  colors: ColorPalette;
-  icon: string;
-  label: string;
-  onPress: () => void;
-  styles: ReturnType<typeof createStyles>;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.actionRow,
-        pressed && styles.actionRowPressed,
-      ]}>
-      <View style={styles.actionIcon}>
-        <Feather color={colors.text.brand} name={icon} size={18} />
-      </View>
-      <Text style={styles.actionLabel}>{label}</Text>
-      <Feather color={colors.text.placeholder} name="chevron-right" size={18} />
-    </Pressable>
   );
 }
 
@@ -320,22 +351,22 @@ function createStyles(colors: ColorPalette) {
       }),
     },
     dragZone: {
-      paddingBottom: spacing.sm,
+      paddingBottom: spacing.md,
       paddingHorizontal: spacing.lg,
-      paddingTop: spacing.sm,
+      paddingTop: spacing.md,
     },
     handle: {
       alignSelf: 'center',
       backgroundColor: colors.border.strong,
       borderRadius: radii.pill,
-      height: 5,
+      height: 4,
       marginBottom: spacing.md,
-      width: 48,
+      width: 40,
     },
     peekHeader: {
       alignItems: 'center',
       flexDirection: 'row',
-      gap: spacing.md,
+      gap: spacing.sm,
     },
     peekCopy: {
       flex: 1,
@@ -345,23 +376,13 @@ function createStyles(colors: ColorPalette) {
     peekTitle: {
       ...typography.label,
       color: colors.text.primary,
-      fontSize: 17,
+      fontSize: 15,
       fontWeight: '700',
     },
     peekSubtitle: {
       ...typography.caption,
       color: colors.text.secondary,
-    },
-    expandChip: {
-      alignItems: 'center',
-      backgroundColor: colors.background.accent,
-      borderRadius: radii.pill,
-      height: 36,
-      justifyContent: 'center',
-      width: 36,
-    },
-    expandChipPressed: {
-      opacity: 0.8,
+      fontSize: 11,
     },
     scroll: {
       flex: 1,
@@ -443,10 +464,7 @@ function createStyles(colors: ColorPalette) {
       color: colors.text.secondary,
       lineHeight: 20,
     },
-    actions: {
-      gap: spacing.sm,
-    },
-    actionRow: {
+    protectionCard: {
       alignItems: 'center',
       backgroundColor: colors.input.background,
       borderColor: colors.border.default,
@@ -454,25 +472,61 @@ function createStyles(colors: ColorPalette) {
       borderWidth: 1,
       flexDirection: 'row',
       gap: spacing.md,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.md,
+      padding: spacing.md,
     },
-    actionRowPressed: {
-      opacity: 0.88,
+    protectionCopy: {
+      flex: 1,
+      gap: spacing.xs,
+      minWidth: 0,
     },
-    actionIcon: {
-      alignItems: 'center',
-      backgroundColor: colors.background.accent,
-      borderRadius: radii.pill,
-      height: 36,
-      justifyContent: 'center',
-      width: 36,
-    },
-    actionLabel: {
+    protectionTitle: {
       ...typography.label,
       color: colors.text.primary,
+      fontSize: 16,
+    },
+    protectionBody: {
+      ...typography.caption,
+      color: colors.text.secondary,
+      lineHeight: 18,
+    },
+    appList: {
+      gap: spacing.sm,
+    },
+    blockedRow: {
+      alignItems: 'center',
+      backgroundColor: colors.input.background,
+      borderColor: colors.border.default,
+      borderRadius: radii.lg,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: spacing.md,
+      padding: spacing.md,
+    },
+    blockedInfo: {
       flex: 1,
-      fontSize: 15,
+      gap: spacing.xs,
+      minWidth: 0,
+    },
+    blockedName: {
+      ...typography.label,
+      color: colors.text.primary,
+    },
+    blockedPackage: {
+      ...typography.caption,
+      color: colors.text.placeholder,
+    },
+    showAllButton: {
+      alignSelf: 'flex-start',
+      paddingVertical: spacing.xs,
+    },
+    showAllButtonPressed: {
+      opacity: 0.7,
+    },
+    showAllText: {
+      ...typography.caption,
+      color: colors.text.brand,
+      fontWeight: '700',
+      textDecorationLine: 'underline',
     },
   });
 }

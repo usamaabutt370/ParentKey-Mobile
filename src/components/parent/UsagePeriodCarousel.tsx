@@ -35,7 +35,7 @@ type Props = {
 
 const PERIOD_CARD_PREVIEW_LIMIT = 3;
 /** Collapsed card height — keeps empty and filled cards visually aligned. */
-const PERIOD_CARD_HEIGHT = 536;
+const PERIOD_CARD_HEIGHT = 516;
 /** Extra height added when “All apps” is open so the list can scroll. */
 const PERIOD_CARD_EXPAND_EXTRA = 100;
 
@@ -579,11 +579,12 @@ export function UsagePeriodCarousel({ cards, emptyHint }: Props) {
 function createCarouselStyles(colors: ColorPalette) {
   return StyleSheet.create({
     wrap: {
-      gap: spacing.md,
+      gap: spacing.sm,
       marginHorizontal: -spacing.lg,
+      marginTop: 20,
     },
     listContent: {
-      paddingVertical: spacing.xs,
+      paddingVertical: 0,
     },
     dots: {
       alignItems: 'center',

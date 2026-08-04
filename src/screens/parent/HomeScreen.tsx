@@ -1,12 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Platform,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import {
   ChildPickerSheet,
@@ -19,7 +20,7 @@ import { ScreenLayout, useScreenStyles } from '../../components';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useParentActivityDashboard } from '../../hooks/useParentActivityDashboard';
-import { getChildDisplayName } from '../../lib/children';
+import { getChildDisplayName, setChildUninstallAllowed } from '../../lib/children';
 import type { ParentTabParamList } from '../../navigation/types';
 import type { ColorPalette } from '../../theme/colors';
 import { spacing, typography } from '../../theme';
@@ -28,6 +29,7 @@ type HomeNavigation = BottomTabNavigationProp<ParentTabParamList, 'Home'>;
 
 export function ParentHomeScreen() {
   const navigation = useNavigation<HomeNavigation>();
+  const isFocused = useIsFocused();
   const screenStyles = useScreenStyles();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -41,10 +43,13 @@ export function ParentHomeScreen() {
     selectedStats: stats,
     selectedTopApps: topApps,
     selectedPeriodCards,
-    selectedAlerts: alerts,
+    selectedBlockedRules,
+    selectedAppIcons,
+    patchChildUninstallAllowed,
     loading: activityLoading,
   } = useParentActivityDashboard();
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [updatingUninstall, setUpdatingUninstall] = useState(false);
   const firstName = session?.user.user_metadata?.first_name;
   const parentName =
     typeof firstName === 'string' && firstName.trim().length > 0
@@ -58,6 +63,74 @@ export function ParentHomeScreen() {
       ? 'App usage sync is not available on iOS. Use Screen Time on the child device for limits and blocking.'
       : 'Usage data appears after the child enables Usage access and syncs.';
 
+  const handleManageBlockedApps = useCallback(() => {
+    if (!selectedChildId) {
+      navigation.navigate('Controls');
+      return;
+    }
+
+    navigation.navigate('Controls', {
+      screen: 'SelectApps',
+      params: { mode: 'block', childId: selectedChildId },
+    });
+  }, [navigation, selectedChildId]);
+
+  const handleToggleUninstallAllowed = useCallback(
+    (allowed: boolean) => {
+      const parentId = session?.user.id;
+      if (!parentId || !selectedChildId || !selectedChild) {
+        return;
+      }
+
+      const childId = selectedChildId;
+      const previous = selectedChild.uninstallAllowed;
+
+      const applyChange = async () => {
+        setUpdatingUninstall(true);
+        patchChildUninstallAllowed(childId, allowed);
+
+        const result = await setChildUninstallAllowed({
+          parentId,
+          childId,
+          allowed,
+        });
+
+        setUpdatingUninstall(false);
+
+        if (!result.ok) {
+          patchChildUninstallAllowed(childId, previous);
+          Alert.alert('Could not update setting', result.message);
+        }
+      };
+
+      if (allowed) {
+        Alert.alert(
+          'Allow uninstall?',
+          'This lets the child device turn off uninstall protection so ParentKey Child can be removed. Turn this off again when you want protection restored.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Allow',
+              style: 'destructive',
+              onPress: () => {
+                void applyChange();
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      void applyChange();
+    },
+    [
+      patchChildUninstallAllowed,
+      selectedChild,
+      selectedChildId,
+      session?.user.id,
+    ],
+  );
+
   return (
     <View style={styles.root}>
       <ScreenLayout
@@ -66,21 +139,26 @@ export function ParentHomeScreen() {
         contentStyle={styles.content}
         style={styles.layout}>
         <View style={styles.topBar}>
-          <Text style={screenStyles.brand}>ParentKey</Text>
-          {parentName ? (
-            <Text numberOfLines={1} style={styles.parentName}>
-              {parentName}
-            </Text>
-          ) : null}
+          {children.length > 0 ? (
+            <View style={styles.childSlot}>
+              <ChildSelectorChip
+                child={selectedChild}
+                disabled={activityLoading && !selectedChild}
+                onPress={() => setPickerVisible(true)}
+              />
+            </View>
+          ) : (
+            <View style={styles.topBarSpacer} />
+          )}
+          <View style={styles.brandBlock}>
+            <Text style={[screenStyles.brand, styles.brandText]}>ParentKey</Text>
+            {parentName ? (
+              <Text numberOfLines={1} style={styles.parentName}>
+                {parentName}
+              </Text>
+            ) : null}
+          </View>
         </View>
-
-        {children.length > 0 ? (
-          <ChildSelectorChip
-            child={selectedChild}
-            disabled={activityLoading && !selectedChild}
-            onPress={() => setPickerVisible(true)}
-          />
-        ) : null}
 
         {activityLoading ? (
           <ActivityIndicator color={colors.brand.tealLight} size="small" />
@@ -93,15 +171,19 @@ export function ParentHomeScreen() {
       </ScreenLayout>
 
       <HomeActivitySheet
-        alerts={alerts}
+        appIcons={selectedAppIcons}
+        blockedRules={selectedBlockedRules}
         childName={selectedName}
         loading={activityLoading}
+        screenFocused={isFocused}
+        showDeviceProtection={Boolean(selectedChild)}
         stats={stats}
         summary={summary}
         topApps={topApps}
-        onOpenChildren={() => navigation.navigate('Children')}
-        onOpenReports={() => navigation.navigate('Reports')}
-        onOpenRules={() => navigation.navigate('Controls')}
+        uninstallAllowed={selectedChild?.uninstallAllowed === true}
+        uninstallUpdating={updatingUninstall}
+        onManageBlockedApps={handleManageBlockedApps}
+        onToggleUninstallAllowed={handleToggleUninstallAllowed}
       />
 
       <ChildPickerSheet
@@ -123,25 +205,46 @@ function createStyles(colors: ColorPalette) {
     },
     layout: {
       paddingBottom: 0,
+      paddingTop: spacing.xs,
     },
     content: {
-      gap: spacing.xl,
+      gap: spacing.sm,
       // Keep the usage card above the always-visible peek sheet.
-      paddingBottom: HOME_ACTIVITY_SHEET_PEEK + spacing.xl,
+      paddingBottom: HOME_ACTIVITY_SHEET_PEEK + spacing.lg,
+      paddingTop: 0,
     },
     topBar: {
       alignItems: 'center',
       flexDirection: 'row',
-      gap: spacing.md,
+      gap: spacing.sm,
       justifyContent: 'space-between',
+      marginBottom: 0,
+    },
+    topBarSpacer: {
+      flex: 1,
+    },
+    childSlot: {
+      flex: 1,
+      minWidth: 0,
+      paddingRight: spacing.sm,
+    },
+    brandBlock: {
+      alignItems: 'flex-end',
+      flexShrink: 0,
+      gap: 0,
+      maxWidth: '42%',
+    },
+    brandText: {
+      fontSize: 22,
+      lineHeight: 26,
+      textAlign: 'right',
     },
     parentName: {
-      ...typography.label,
+      ...typography.caption,
       color: colors.text.primary,
-      flexShrink: 1,
-      fontSize: 16,
+      fontSize: 13,
       fontWeight: '600',
-      maxWidth: '48%',
+      lineHeight: 16,
       textAlign: 'right',
     },
   });

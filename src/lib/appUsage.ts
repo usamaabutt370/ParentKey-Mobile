@@ -720,41 +720,15 @@ function mergeUsageWithInstalledApps(
   const iconByPackage = new Map(
     installed.map(app => [app.packageName, app.iconBase64 ?? null]),
   );
-  const merged = new Map<string, UsageTopApp>();
 
-  for (const app of usageApps) {
-    merged.set(app.packageName, {
+  // Only apps with tracked time belong on usage period cards.
+  return usageApps
+    .filter(app => app.foregroundSeconds > 0)
+    .map(app => ({
       ...app,
-      hasTracking: app.foregroundSeconds > 0,
+      hasTracking: true,
       iconBase64: iconByPackage.get(app.packageName) ?? app.iconBase64 ?? null,
-    });
-  }
-
-  const preferredInstalled = [
-    ...installed.filter(app => !app.isSystemApp),
-    ...installed.filter(app => app.isSystemApp),
-  ];
-
-  for (const app of preferredInstalled) {
-    if (merged.has(app.packageName)) {
-      continue;
-    }
-    if (isExcludedUsagePackage(app.packageName)) {
-      continue;
-    }
-
-    merged.set(app.packageName, {
-      packageName: app.packageName,
-      name: app.appName,
-      time: formatUsageDurationLong(0),
-      percentage: 0,
-      foregroundSeconds: 0,
-      hasTracking: false,
-      iconBase64: app.iconBase64 ?? null,
-    });
-  }
-
-  return Array.from(merged.values())
+    }))
     .sort((left, right) => {
       if (right.foregroundSeconds !== left.foregroundSeconds) {
         return right.foregroundSeconds - left.foregroundSeconds;

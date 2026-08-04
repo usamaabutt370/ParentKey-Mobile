@@ -34,6 +34,7 @@ type TabIconName = 'home' | 'users' | 'shield' | 'bar-chart-2' | 'settings';
 const TAB_ICONS: Record<keyof ParentTabParamList, TabIconName> = {
   Home: 'home',
   Children: 'users',
+  // Controls remains registered for in-app navigation but is hidden from the tab bar.
   Controls: 'shield',
   Reports: 'bar-chart-2',
   Settings: 'settings',
@@ -150,6 +151,7 @@ export function ParentTabNavigator() {
           };
         }}
       />
+      {/* Controls tab removed from bottom bar for now — stack kept for Home / deep links. */}
       <Tab.Screen
         component={ControlsStackNavigator}
         name="Controls"
@@ -159,6 +161,8 @@ export function ParentTabNavigator() {
 
           return {
             title: 'Controls',
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' },
             tabBarStyle: hideTabBar
               ? { ...styles.tabBar, display: 'none' }
               : styles.tabBar,

@@ -119,6 +119,7 @@ export function useParentActivityDashboard() {
   const [alerts, setAlerts] = useState<ActivityAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
   const refresh = useCallback(async (options?: { silent?: boolean }) => {
     const parentId = session?.user.id;
@@ -138,6 +139,7 @@ export function useParentActivityDashboard() {
       setStats({ activeRulesCount: 0, alertCount: 0 });
       setLoading(false);
       setError(null);
+      hasLoadedRef.current = false;
       return;
     }
 
@@ -151,6 +153,7 @@ export function useParentActivityDashboard() {
     if (!childrenResult.ok) {
       setError(childrenResult.message);
       setLoading(false);
+      hasLoadedRef.current = true;
       return;
     }
 
@@ -179,6 +182,7 @@ export function useParentActivityDashboard() {
       setSummary(EMPTY_SUMMARY);
       setStats({ activeRulesCount: 0, alertCount: 0 });
       setLoading(false);
+      hasLoadedRef.current = true;
       return;
     }
 
@@ -193,18 +197,21 @@ export function useParentActivityDashboard() {
     if (!rulesResult.ok) {
       setError(rulesResult.message);
       setLoading(false);
+      hasLoadedRef.current = true;
       return;
     }
 
     if (!usageResult.ok) {
       setError(usageResult.message);
       setLoading(false);
+      hasLoadedRef.current = true;
       return;
     }
 
     if (!devicesResult.ok) {
       setError(devicesResult.message);
       setLoading(false);
+      hasLoadedRef.current = true;
       return;
     }
 
@@ -240,6 +247,7 @@ export function useParentActivityDashboard() {
       alertCount: nextAlerts.length,
     });
     setLoading(false);
+    hasLoadedRef.current = true;
   }, [session?.user.id]);
 
   const childrenIdsKey = useMemo(
@@ -263,7 +271,7 @@ export function useParentActivityDashboard() {
 
   useFocusEffect(
     useCallback(() => {
-      void refresh();
+      void refresh({ silent: hasLoadedRef.current });
 
       // Backup while Realtime is unavailable or migration 018 is not applied.
       const pollId = setInterval(() => {
@@ -393,6 +401,29 @@ export function useParentActivityDashboard() {
     [installedFallbackApps, selectedHourlyRecords, selectedView.records],
   );
 
+  const selectedBlockedRules = selectedView.rules;
+
+  const selectedAppIcons = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const app of installedFallbackApps) {
+      map.set(app.packageName, app.iconBase64 ?? null);
+    }
+    return map;
+  }, [installedFallbackApps]);
+
+  const patchChildUninstallAllowed = useCallback(
+    (childId: string, allowed: boolean) => {
+      setChildren(current =>
+        current.map(child =>
+          child.id === childId
+            ? { ...child, uninstallAllowed: allowed }
+            : child,
+        ),
+      );
+    },
+    [],
+  );
+
   return {
     children,
     selectedChildId,
@@ -403,7 +434,10 @@ export function useParentActivityDashboard() {
     selectedTopApps: selectedView.topApps,
     selectedWeeklyUsage: selectedView.weeklyUsage,
     selectedAlerts: selectedView.alerts,
+    selectedBlockedRules,
+    selectedAppIcons,
     selectedPeriodCards,
+    patchChildUninstallAllowed,
     records,
     rules,
     summary,
