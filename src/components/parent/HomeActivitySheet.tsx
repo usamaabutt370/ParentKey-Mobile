@@ -261,6 +261,7 @@ export function HomeActivitySheet({
 
           <Text style={styles.sectionLabel}>Blocked apps</Text>
           <AuthButton
+            key={blockedRules.length === 0 ? 'block-apps' : 'manage-blocked'}
             onPress={onManageBlockedApps}
             title={
               blockedRules.length === 0 ? 'Block apps' : 'Manage blocked apps'

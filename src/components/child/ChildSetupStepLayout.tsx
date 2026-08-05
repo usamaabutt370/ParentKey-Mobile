@@ -1,28 +1,59 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  type ImageSourcePropType,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import {
+  pickThemeableImage,
+  type ThemeableImageSource,
+} from '../../constants/childOnboarding';
 import type { ColorPalette } from '../../theme/colors';
 import { radii, spacing, typography } from '../../theme';
 
 type Props = {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   currentStep: number;
   icon?: string | null;
-  subtitle: string;
-  title: string;
+  image?: ImageSourcePropType | ThemeableImageSource;
+  subtitle?: string;
+  title?: string;
   totalSteps: number;
 };
+
+function isThemeableImageSource(
+  value: ImageSourcePropType | ThemeableImageSource,
+): value is ThemeableImageSource {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'dark' in value &&
+    'light' in value
+  );
+}
 
 export function ChildSetupStepLayout({
   children,
   currentStep,
   icon,
+  image,
   subtitle,
   title,
   totalSteps,
 }: Props) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const { width: windowWidth } = useWindowDimensions();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const heroSize = Math.round(windowWidth * 0.7);
+  const imageSource = image
+    ? isThemeableImageSource(image)
+      ? pickThemeableImage(image, isDark)
+      : image
+    : null;
 
   return (
     <View style={styles.container}>
@@ -42,9 +73,20 @@ export function ChildSetupStepLayout({
       <Text style={styles.eyebrow}>
         Step {currentStep} of {totalSteps}
       </Text>
-      {icon ? <Text style={styles.icon}>{icon}</Text> : null}
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
+      {imageSource ? (
+        <View style={[styles.heroFrame, { width: heroSize, height: heroSize }]}>
+          <Image
+            accessibilityIgnoresInvertColors
+            resizeMode="cover"
+            source={imageSource}
+            style={styles.heroImage}
+          />
+        </View>
+      ) : icon ? (
+        <Text style={styles.icon}>{icon}</Text>
+      ) : null}
+      {title ? <Text style={styles.title}>{title}</Text> : null}
+      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       <View style={styles.body}>{children}</View>
     </View>
   );
@@ -53,7 +95,6 @@ export function ChildSetupStepLayout({
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: {
-      flex: 1,
       gap: spacing.md,
       justifyContent: 'flex-start',
       paddingTop: spacing.sm,
@@ -86,6 +127,19 @@ function createStyles(colors: ColorPalette) {
     icon: {
       fontSize: 48,
       textAlign: 'center',
+    },
+    heroFrame: {
+      alignSelf: 'center',
+      backgroundColor: colors.background.primary,
+      borderColor: colors.border.default,
+      borderRadius: radii.xl,
+      borderWidth: 1,
+      overflow: 'hidden',
+    },
+    heroImage: {
+      borderRadius: radii.xl,
+      height: '100%',
+      width: '100%',
     },
     title: {
       ...typography.title,

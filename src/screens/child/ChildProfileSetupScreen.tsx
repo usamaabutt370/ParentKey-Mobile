@@ -1,15 +1,17 @@
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   AuthButton,
   AuthTextInput,
   ScreenLayout,
+  Spacer,
 } from '../../components';
 import { ChildProfilePhotoPicker } from '../../components/child/ChildProfilePhotoPicker';
 import { ChildSetupStepLayout } from '../../components/child/ChildSetupStepLayout';
-import { InfoTipCard } from '../../components/parent';
+// import { InfoTipCard } from '../../components/parent';
 import { CHILD_SETUP_TOTAL_STEPS } from '../../constants/childSetup';
+// import { CHILD_ONBOARDING_IMAGES } from '../../constants/childOnboarding';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { uploadChildAvatar } from '../../lib/childAvatar';
@@ -117,6 +119,9 @@ export function ChildProfileSetupScreen({ navigation }: Props) {
   };
 
   return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.keyboardAvoidingView}>
     <ScreenLayout
       keyboardAvoiding
       safeAreaEdges={['top', 'left', 'right', 'bottom']}
@@ -124,8 +129,9 @@ export function ChildProfileSetupScreen({ navigation }: Props) {
       contentStyle={styles.content}>
       <ChildSetupStepLayout
         currentStep={2}
-        subtitle="Add a photo and tell us who uses this device so your parent can recognize it."
-        title="About you"
+        // image={CHILD_ONBOARDING_IMAGES.profile}
+        // subtitle="Add a photo and tell us who uses this device so your parent can recognize it."
+        // title="About you"
         totalSteps={CHILD_SETUP_TOTAL_STEPS}>
         <ChildProfilePhotoPicker imageUri={photoUri} onChange={setPhotoUri} />
 
@@ -158,7 +164,7 @@ export function ChildProfileSetupScreen({ navigation }: Props) {
           />
           <AuthTextInput
             error={fieldErrors.age}
-            keyboardType="number-pad"
+            keyboardType="numeric"
             label="Age"
             maxLength={2}
             onChangeText={text => {
@@ -170,10 +176,10 @@ export function ChildProfileSetupScreen({ navigation }: Props) {
           />
         </View>
 
-        <InfoTipCard message="Your parent will see this name and photo on their Children list after setup." />
+        {/* <InfoTipCard message="Your parent will see this name and photo on their Children list after setup." /> */}
 
         {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-
+        <Spacer.Column numberOfSpaces={10} />
         <AuthButton
           loading={saving}
           onPress={() => void handleContinue()}
@@ -181,11 +187,15 @@ export function ChildProfileSetupScreen({ navigation }: Props) {
         />
       </ChildSetupStepLayout>
     </ScreenLayout>
+    </KeyboardAvoidingView>
   );
 }
 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
+    keyboardAvoidingView: {
+      flex: 1,
+    },
     content: {
       flexGrow: 1,
       paddingBottom: spacing.lg,

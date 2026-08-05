@@ -230,8 +230,10 @@ object ParentKeyUsageCollector {
   }
 
   /**
-   * Hour buckets from INTERVAL_HOURLY UsageStats plus UsageEvents, taking the
-   * larger value per package/hour (same absorb pattern as [aggregateUsageMs]).
+   * Hour buckets from UsageEvents.
+   *
+   * [UsageStatsManager] has no public INTERVAL_HOURLY; event streaming is the
+   * supported way to split foreground time by hour of day.
    */
   private fun aggregateHourlyUsageMs(
     usageStatsManager: UsageStatsManager,
@@ -240,7 +242,6 @@ object ParentKeyUsageCollector {
     endMs: Long,
   ): MutableMap<Pair<String, Int>, Long> {
     val totals = linkedMapOf<Pair<String, Int>, Long>()
-    val hourCalendar = Calendar.getInstance()
 
     fun absorb(packageName: String?, hour: Int, durationMs: Long) {
       if (
@@ -253,23 +254,6 @@ object ParentKeyUsageCollector {
       }
       val key = packageName to hour
       totals[key] = maxOf(totals[key] ?: 0L, durationMs)
-    }
-
-    try {
-      usageStatsManager
-        .queryUsageStats(UsageStatsManager.INTERVAL_HOURLY, startMs, endMs)
-        ?.forEach { stat ->
-          val stamp =
-            when {
-              stat.firstTimeStamp in startMs until endMs -> stat.firstTimeStamp
-              stat.lastTimeStamp in startMs until endMs -> stat.lastTimeStamp
-              else -> return@forEach
-            }
-          hourCalendar.timeInMillis = stamp
-          absorb(stat.packageName, hourCalendar.get(Calendar.HOUR_OF_DAY), foregroundMsFromStat(stat))
-        }
-    } catch (error: Exception) {
-      Log.w(TAG, "queryUsageStats INTERVAL_HOURLY failed", error)
     }
 
     for ((key, eventMs) in aggregateHourlyFromEvents(usageStatsManager, startMs, endMs)) {

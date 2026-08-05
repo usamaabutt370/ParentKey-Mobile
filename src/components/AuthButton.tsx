@@ -35,6 +35,20 @@ export function AuthButton({
   const isDisabled = disabled || loading;
   const isPrimary = variant === 'primary';
 
+  const content = loading ? (
+    <ActivityIndicator
+      color={isPrimary ? colors.button.text : colors.brand.tealLight}
+    />
+  ) : (
+    <Text
+      style={[
+        styles.label,
+        isPrimary ? styles.primaryLabel : styles.secondaryLabel,
+      ]}>
+      {title}
+    </Text>
+  );
+
   return (
     <View style={[styles.container, isPrimary && styles.primaryShadow]}>
       <Pressable
@@ -42,8 +56,8 @@ export function AuthButton({
         accessibilityRole="button"
         disabled={isDisabled}
         style={({ pressed }) => [
-          styles.button,
-          isPrimary ? styles.primaryButton : styles.secondary,
+          styles.pressable,
+          isPrimary ? styles.primaryPressable : styles.secondary,
           pressed && !isDisabled && styles.pressed,
           isDisabled && styles.disabled,
           style as StyleProp<ViewStyle>,
@@ -54,21 +68,11 @@ export function AuthButton({
             end={{ x: 1, y: 0.5 }}
             pointerEvents="none"
             start={{ x: 0, y: 0.5 }}
-            style={styles.gradient}
-          />
-        ) : null}
-        {loading ? (
-          <ActivityIndicator
-            color={isPrimary ? colors.button.text : colors.brand.tealLight}
-          />
+            style={styles.inner}>
+            {content}
+          </LinearGradient>
         ) : (
-          <Text
-            style={[
-              styles.label,
-              isPrimary ? styles.primaryLabel : styles.secondaryLabel,
-            ]}>
-            {title}
-          </Text>
+          <View style={styles.inner}>{content}</View>
         )}
       </Pressable>
     </View>
@@ -88,20 +92,21 @@ function createStyles(colors: ColorPalette) {
       shadowOpacity: 0.6,
       shadowRadius: 12,
     },
-    button: {
-      alignItems: 'center',
+    pressable: {
       borderRadius: radii.pill,
       height: BUTTON_HEIGHT,
-      justifyContent: 'center',
       overflow: 'hidden',
-      paddingHorizontal: 24,
       width: '100%',
     },
-    primaryButton: {
+    primaryPressable: {
       backgroundColor: colors.button.gradientStart,
     },
-    gradient: {
-      ...StyleSheet.absoluteFill,
+    inner: {
+      alignItems: 'center',
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+      width: '100%',
     },
     secondary: {
       backgroundColor: 'transparent',

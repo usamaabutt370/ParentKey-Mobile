@@ -2,9 +2,10 @@ import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthButton, ScreenLayout } from '../../components';
-import { InfoTipCard } from '../../components/parent';
+// import { InfoTipCard } from '../../components/parent';
 import { ChildSetupStepLayout } from '../../components/child/ChildSetupStepLayout';
 import { CHILD_SETUP_TOTAL_STEPS } from '../../constants/childSetup';
+import { CHILD_ONBOARDING_IMAGES } from '../../constants/childOnboarding';
 import { useTheme } from '../../context/ThemeContext';
 import type { ChildStackParamList } from '../../navigation/types';
 import type { ColorPalette } from '../../theme/colors';
@@ -29,7 +30,7 @@ export function ChildConsentScreen({ navigation }: Props) {
       contentStyle={styles.content}>
       <ChildSetupStepLayout
         currentStep={1}
-        icon="🤝"
+        image={CHILD_ONBOARDING_IMAGES.consent}
         subtitle="Your parent can manage screen time on this device. You need to agree before setup continues."
         title="Connect to your parent"
         totalSteps={CHILD_SETUP_TOTAL_STEPS}>
@@ -42,7 +43,7 @@ export function ChildConsentScreen({ navigation }: Props) {
           ))}
         </View>
 
-        <InfoTipCard message="ParentKey cannot be installed without your knowledge. You control the permissions on this phone." />
+        {/* <InfoTipCard message="ParentKey cannot be installed without your knowledge. You control the permissions on this phone." /> */}
 
         <AuthButton
           onPress={() => navigation.navigate('ChildProfileSetup')}
