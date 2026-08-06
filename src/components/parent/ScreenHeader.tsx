@@ -8,7 +8,7 @@ import { spacing, typography } from '../../theme';
 type ScreenHeaderProps = {
   onBack?: () => void;
   stepLabel?: string;
-  title: string;
+  title?: string;
   subtitle?: string;
 };
 
@@ -44,6 +44,7 @@ function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: {
       gap: spacing.sm,
+      flexDirection: 'row',
     },
     backButton: {
       alignSelf: 'flex-start',

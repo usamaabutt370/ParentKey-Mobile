@@ -74,6 +74,28 @@ function getDeviceStatus(
   return ageMs <= ONLINE_THRESHOLD_MS ? 'online' : 'offline';
 }
 
+function getPrimaryDeviceLabel(
+  devices: ChildDevice[],
+  childId: string,
+): string | null {
+  const childDevices = devices.filter(device => device.childId === childId);
+
+  if (childDevices.length === 0) {
+    return null;
+  }
+
+  const latest = childDevices.reduce((current, device) =>
+    device.lastSeenAt > current.lastSeenAt ? device : current,
+  );
+
+  const label = latest.deviceLabel?.trim();
+  if (label) {
+    return label;
+  }
+
+  return latest.platform === 'ios' ? 'iPhone' : 'Android device';
+}
+
 function getLatestSyncTime(
   devices: ChildDevice[],
   usageRecords: AppUsageDailyRecord[],
@@ -144,6 +166,7 @@ export function buildChildActivitySummaries(params: {
       blockedAppsCount: childRules.length,
       lastSyncedAt: getLatestSyncTime(params.devices, params.usageRecords, childId),
       deviceStatus: getDeviceStatus(params.devices, childId),
+      deviceLabel: getPrimaryDeviceLabel(params.devices, childId),
     };
   });
 }

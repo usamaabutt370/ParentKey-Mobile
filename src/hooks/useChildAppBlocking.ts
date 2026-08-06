@@ -25,6 +25,7 @@ import {
   hasRecentChildAppInventorySync,
   saveChildAppInventoryCache,
 } from '../lib/childAppInventoryCache';
+import { getLocalDeviceLabel } from '../lib/deviceLabel';
 import { fetchInstalledApps } from '../lib/installedApps';
 import { resolveIconBase64ForSync } from '../lib/iconCache';
 import { supabase } from '../lib/supabase';
@@ -220,7 +221,7 @@ export function useChildAppBlocking(
         childId,
         deviceKey,
         platform: 'android',
-        deviceLabel: 'Android device',
+        deviceLabel: await getLocalDeviceLabel(),
       });
 
       if (!deviceResult.ok) {

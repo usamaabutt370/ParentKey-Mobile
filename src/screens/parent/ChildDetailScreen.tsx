@@ -3,9 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Platform,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from 'react-native';
@@ -14,10 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
 import {
   BlockedAppRow,
-  ChildActivityCard,
-  InfoTipCard,
   ScreenHeader,
-  TopAppsReport,
 } from '../../components/parent';
 import { AuthButton, ScreenLayout } from '../../components';
 import { getChildAvatar } from '../../constants/childAvatars';
@@ -28,19 +23,13 @@ import { useExpiryCountdown } from '../../hooks/useExpiryCountdown';
 import {
   fetchChildBlockRules,
   fetchChildInstalledApps,
-  fetchParentChildDevices,
   removeChildBlockRule,
   type AppBlockRule,
 } from '../../lib/appRules';
 import {
-  buildTopAppsForDate,
-  fetchChildAppUsage,
-} from '../../lib/appUsage';
-import {
   fetchChildById,
   getChildDisplayName,
   deleteChildAccount,
-  setChildUninstallAllowed,
 } from '../../lib/children';
 import {
   buildAppIconLookup,
@@ -52,10 +41,7 @@ import {
   subscribeToPairingSession,
   type PairingSession,
 } from '../../lib/pairing';
-import { buildChildActivitySummaries, formatTimeAgo } from '../../lib/parentActivity';
 import { supabase } from '../../lib/supabase';
-import type { UsageTopApp } from '../../types/appUsage';
-import type { ChildActivitySummary } from '../../types/parentActivity';
 import type { ChildrenStackParamList } from '../../navigation/types';
 import type { ChildProfile } from '../../types/child';
 import type { ColorPalette } from '../../theme/colors';
@@ -71,13 +57,6 @@ function formatLinkedDate(iso: string): string {
   });
 }
 
-function getLocalDateString(date = new Date()): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 export function ChildDetailScreen({ navigation, route }: Props) {
   const { childId } = route.params;
   const { session } = useAuth();
@@ -86,16 +65,12 @@ export function ChildDetailScreen({ navigation, route }: Props) {
   const [child, setChild] = useState<ChildProfile | null>(null);
   const [blockRules, setBlockRules] = useState<AppBlockRule[]>([]);
   const [appIcons, setAppIcons] = useState<Map<string, AppIconData>>(new Map());
-  const [activitySummary, setActivitySummary] =
-    useState<ChildActivitySummary | null>(null);
-  const [topApps, setTopApps] = useState<UsageTopApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unblockingPackage, setUnblockingPackage] = useState<string | null>(
     null,
   );
   const [deleting, setDeleting] = useState(false);
-  const [updatingUninstall, setUpdatingUninstall] = useState(false);
   const [reconnectSession, setReconnectSession] =
     useState<PairingSession | null>(null);
   const [reconnectLoading, setReconnectLoading] = useState(false);
@@ -116,13 +91,10 @@ export function ChildDetailScreen({ navigation, route }: Props) {
     setLoading(true);
     setError(null);
 
-    const [childResult, rulesResult, installedAppsResult, usageResult, devicesResult] =
-      await Promise.all([
+    const [childResult, rulesResult, installedAppsResult] = await Promise.all([
       fetchChildById(parentId, childId),
       fetchChildBlockRules(childId),
       fetchChildInstalledApps(childId),
-      fetchChildAppUsage(childId, 7),
-      fetchParentChildDevices([childId]),
     ]);
 
     if (childResult.ok) {
@@ -149,24 +121,6 @@ export function ChildDetailScreen({ navigation, route }: Props) {
       setAppIcons(buildAppIconLookup(appsWithIcons));
     } else {
       setAppIcons(new Map());
-    }
-
-    if (childResult.ok) {
-      const childName = getChildDisplayName(childResult.child);
-      const usageRecords = usageResult.ok ? usageResult.records : [];
-      const summaries = buildChildActivitySummaries({
-        childIds: [childId],
-        childNames: { [childId]: childName },
-        usageRecords,
-        rules: rulesResult.ok ? rulesResult.rules : [],
-        devices: devicesResult.ok ? devicesResult.devices : [],
-      });
-
-      setActivitySummary(summaries[0] ?? null);
-      setTopApps(buildTopAppsForDate(usageRecords, getLocalDateString()));
-    } else {
-      setActivitySummary(null);
-      setTopApps([]);
     }
 
     setLoading(false);
@@ -322,52 +276,6 @@ export function ChildDetailScreen({ navigation, route }: Props) {
     );
   };
 
-  const handleToggleUninstallAllowed = (allowed: boolean) => {
-    const parentId = session?.user.id;
-    if (!parentId || !child) {
-      return;
-    }
-
-    const applyChange = async () => {
-      setUpdatingUninstall(true);
-      const previous = child.uninstallAllowed;
-      setChild({ ...child, uninstallAllowed: allowed });
-
-      const result = await setChildUninstallAllowed({
-        parentId,
-        childId,
-        allowed,
-      });
-
-      setUpdatingUninstall(false);
-
-      if (!result.ok) {
-        setChild({ ...child, uninstallAllowed: previous });
-        Alert.alert('Could not update setting', result.message);
-      }
-    };
-
-    if (allowed) {
-      Alert.alert(
-        'Allow uninstall?',
-        'This lets the child device turn off uninstall protection so ParentKey Child can be removed. Turn this off again when you want protection restored.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Allow',
-            style: 'destructive',
-            onPress: () => {
-              void applyChange();
-            },
-          },
-        ],
-      );
-      return;
-    }
-
-    void applyChange();
-  };
-
   const avatar = getChildAvatar(child?.avatarId ?? undefined);
   const displayName = child ? getChildDisplayName(child) : 'Child';
 
@@ -378,8 +286,6 @@ export function ChildDetailScreen({ navigation, route }: Props) {
       contentStyle={styles.content}>
       <ScreenHeader
         onBack={() => navigation.goBack()}
-        subtitle="Profile and account details"
-        title={displayName}
       />
 
       {loading ? (
@@ -407,12 +313,6 @@ export function ChildDetailScreen({ navigation, route }: Props) {
               )}
             </View>
             <Text style={styles.heroName}>{displayName}</Text>
-            {child.email ? (
-              <Text style={styles.heroEmail}>{child.email}</Text>
-            ) : null}
-          </View>
-
-          <View style={styles.detailsCard}>
             <DetailRow label="First name" value={child.firstName ?? '—'} />
             <View style={styles.divider} />
             <DetailRow label="Last name" value={child.lastName ?? '—'} />
@@ -426,71 +326,7 @@ export function ChildDetailScreen({ navigation, route }: Props) {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Activity</Text>
-            {activitySummary ? (
-              <>
-                <ChildActivityCard summary={activitySummary} />
-                {activitySummary.lastSyncedAt ? (
-                  <Text style={styles.syncMeta}>
-                    Last synced {formatTimeAgo(activitySummary.lastSyncedAt)}
-                  </Text>
-                ) : null}
-                {topApps.length > 0 ? (
-                  <TopAppsReport apps={topApps} />
-                ) : (
-                  <InfoTipCard
-                    message={
-                      Platform.OS === 'ios'
-                        ? 'App usage sync is not available on iOS. Block or limit apps on the child\'s iPhone with Screen Time.'
-                        : 'No app usage synced for today. Ask your child to enable Usage access and tap Sync apps and rules.'
-                    }
-                  />
-                )}
-              </>
-            ) : (
-              <InfoTipCard
-                message={
-                  Platform.OS === 'ios'
-                    ? 'On iOS, app blocking and limits are set up on the child\'s iPhone with Screen Time.'
-                    : 'Activity appears after the child device syncs app usage.'
-                }
-              />
-            )}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Device protection</Text>
-            <View style={styles.protectionCard}>
-              <View style={styles.protectionCopy}>
-                <Text style={styles.protectionTitle}>Allow app uninstall</Text>
-                <Text style={styles.protectionBody}>
-                  When on, the child device can deactivate Device Admin and
-                  uninstall ParentKey Child.
-                </Text>
-              </View>
-              <Switch
-                disabled={updatingUninstall}
-                onValueChange={handleToggleUninstallAllowed}
-                trackColor={{
-                  false: colors.border.default,
-                  true: colors.brand.teal,
-                }}
-                value={child.uninstallAllowed}
-              />
-            </View>
-            <InfoTipCard
-              message={
-                child.uninstallAllowed
-                  ? 'Uninstall is currently allowed. Turn this off after the child reinstalls or when you want protection again.'
-                  : 'Keep this off to make ParentKey Child harder to remove without your permission.'
-              }
-            />
-          </View>
-
-          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Reconnect device</Text>
-            <InfoTipCard message="If this child's phone went back to the QR screen, generate a reconnect code. It re-links the same account instead of creating a duplicate child." />
-
             {reconnectSession ? (
               <>
                 <View style={styles.qrCard}>
@@ -528,7 +364,7 @@ export function ChildDetailScreen({ navigation, route }: Props) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Blocked apps</Text>
             {blockRules.length === 0 ? (
-              <InfoTipCard message="No apps are blocked for this child yet. Block apps from Controls or tap the button below." />
+              null
             ) : (
               <View style={styles.blockedList}>
                 {blockRules.map(rule => {
@@ -557,7 +393,7 @@ export function ChildDetailScreen({ navigation, route }: Props) {
           </View>
 
           <View style={styles.dangerSection}>
-            <Text style={styles.dangerTitle}>Danger zone</Text>
+            <Text style={styles.dangerTitle}>Delete child account</Text>
             <Text style={styles.dangerBody}>
               Deleting this child removes their login, blocked apps, and synced
               device data. This cannot be undone.
@@ -627,7 +463,6 @@ function createStyles(colors: ColorPalette) {
       textAlign: 'center',
     },
     heroCard: {
-      alignItems: 'center',
       backgroundColor: colors.input.background,
       borderColor: colors.border.default,
       borderRadius: radii.lg,
@@ -636,6 +471,7 @@ function createStyles(colors: ColorPalette) {
       padding: spacing.xl,
     },
     avatar: {
+      alignSelf: 'center',
       alignItems: 'center',
       borderRadius: radii.pill,
       height: 88,
@@ -680,30 +516,6 @@ function createStyles(colors: ColorPalette) {
       ...typography.label,
       color: colors.text.primary,
       fontSize: 18,
-    },
-    protectionCard: {
-      alignItems: 'center',
-      backgroundColor: colors.input.background,
-      borderColor: colors.border.default,
-      borderRadius: radii.lg,
-      borderWidth: 1,
-      flexDirection: 'row',
-      gap: spacing.md,
-      padding: spacing.md,
-    },
-    protectionCopy: {
-      flex: 1,
-      gap: spacing.xs,
-    },
-    protectionTitle: {
-      ...typography.label,
-      color: colors.text.primary,
-      fontSize: 16,
-    },
-    protectionBody: {
-      ...typography.caption,
-      color: colors.text.secondary,
-      lineHeight: 18,
     },
     syncMeta: {
       ...typography.caption,
