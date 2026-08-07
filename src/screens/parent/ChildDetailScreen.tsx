@@ -10,11 +10,12 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
-import {
-  BlockedAppRow,
-  ScreenHeader,
-} from '../../components/parent';
+import { InfoTipCard, ScreenHeader } from '../../components/parent';
 import { AuthButton, ScreenLayout } from '../../components';
+import {
+  HorizontalAppsStrip,
+  type HorizontalAppItem,
+} from '../../components/HorizontalAppsStrip';
 import { getChildAvatar } from '../../constants/childAvatars';
 import { buildPairingQrValue } from '../../constants/pairing';
 import { useAuth } from '../../context/AuthContext';
@@ -278,6 +279,22 @@ export function ChildDetailScreen({ navigation, route }: Props) {
 
   const avatar = getChildAvatar(child?.avatarId ?? undefined);
   const displayName = child ? getChildDisplayName(child) : 'Child';
+  const blockedAppItems = useMemo<HorizontalAppItem[]>(
+    () =>
+      blockRules.map(rule => {
+        const icons = appIcons.get(rule.packageName);
+        return {
+          id: rule.id,
+          packageName: rule.packageName,
+          name: rule.appName ?? rule.packageName,
+          subtitle:
+            unblockingPackage === rule.packageName ? 'Unblocking…' : 'Unblock',
+          iconUri: icons?.iconUri,
+          iconBase64: icons?.iconBase64,
+        };
+      }),
+    [appIcons, blockRules, unblockingPackage],
+  );
 
   return (
     <ScreenLayout
@@ -313,16 +330,24 @@ export function ChildDetailScreen({ navigation, route }: Props) {
               )}
             </View>
             <Text style={styles.heroName}>{displayName}</Text>
-            <DetailRow label="First name" value={child.firstName ?? '—'} />
-            <View style={styles.divider} />
-            <DetailRow label="Last name" value={child.lastName ?? '—'} />
-            <View style={styles.divider} />
-            <DetailRow
-              label="Age"
-              value={child.age != null ? `${child.age} years old` : '—'}
-            />
-            <View style={styles.divider} />
-            <DetailRow label="Linked on" value={formatLinkedDate(child.createdAt)} />
+            <View style={styles.detailsGrid}>
+              <View style={styles.detailsRow}>
+                <DetailRow label="First name" value={child.firstName ?? '—'} />
+                <DetailRow label="Last name" value={child.lastName ?? '—'} />
+              </View>
+              <View style={styles.detailsRow}>
+                <DetailRow
+                  label="Age"
+                  value={
+                    child.age != null ? `${child.age} years old` : '—'
+                  }
+                />
+                <DetailRow
+                  label="Linked on"
+                  value={formatLinkedDate(child.createdAt)}
+                />
+              </View>
+            </View>
           </View>
 
           <View style={styles.section}>
@@ -362,26 +387,25 @@ export function ChildDetailScreen({ navigation, route }: Props) {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Blocked apps</Text>
             {blockRules.length === 0 ? (
-              null
+              <>
+                <Text style={styles.sectionTitle}>Blocked apps</Text>
+                <InfoTipCard message="No apps are blocked for this child yet. Block apps from Controls or tap the button below." />
+              </>
             ) : (
-              <View style={styles.blockedList}>
-                {blockRules.map(rule => {
-                  const icons = appIcons.get(rule.packageName);
-
-                  return (
-                    <BlockedAppRow
-                      iconBase64={icons?.iconBase64}
-                      iconUri={icons?.iconUri}
-                      key={rule.id}
-                      onUnblock={() => handleUnblock(rule)}
-                      rule={rule}
-                      unblocking={unblockingPackage === rule.packageName}
-                    />
+              <HorizontalAppsStrip
+                countLabel={`${blockRules.length} blocked`}
+                items={blockedAppItems}
+                onPressItem={item => {
+                  const rule = blockRules.find(
+                    candidate => candidate.packageName === item.packageName,
                   );
-                })}
-              </View>
+                  if (rule && unblockingPackage !== rule.packageName) {
+                    handleUnblock(rule);
+                  }
+                }}
+                title="Blocked apps"
+              />
             )}
             <AuthButton
               onPress={handleManageBlocks}
@@ -423,7 +447,9 @@ function DetailRow({ label, value }: DetailRowProps) {
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
+      <Text numberOfLines={2} style={styles.value}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -431,7 +457,9 @@ function DetailRow({ label, value }: DetailRowProps) {
 function createDetailRowStyles(colors: ColorPalette) {
   return StyleSheet.create({
     row: {
+      flex: 1,
       gap: spacing.xs,
+      minWidth: 0,
     },
     label: {
       ...typography.caption,
@@ -497,17 +525,13 @@ function createStyles(colors: ColorPalette) {
       color: colors.text.secondary,
       textAlign: 'center',
     },
-    detailsCard: {
-      backgroundColor: colors.input.background,
-      borderColor: colors.border.default,
-      borderRadius: radii.lg,
-      borderWidth: 1,
+    detailsGrid: {
       gap: spacing.md,
-      padding: spacing.lg,
+      marginTop: spacing.sm,
     },
-    divider: {
-      backgroundColor: colors.border.default,
-      height: StyleSheet.hairlineWidth,
+    detailsRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
     },
     section: {
       gap: spacing.md,
@@ -535,9 +559,6 @@ function createStyles(colors: ColorPalette) {
       color: colors.text.primary,
       fontSize: 16,
       textAlign: 'center',
-    },
-    blockedList: {
-      gap: spacing.sm,
     },
     dangerSection: {
       gap: spacing.sm,

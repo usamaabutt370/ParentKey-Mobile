@@ -8,12 +8,12 @@ import { useTheme } from '../context/ThemeContext';
 import {
   ParentHomeScreen,
   ParentReportsScreen,
-  ParentSettingsScreen,
 } from '../screens/parent';
 import type { ColorPalette } from '../theme/colors';
 import { spacing, typography } from '../theme';
 import { ChildrenStackNavigator } from './ChildrenStackNavigator';
 import { ControlsStackNavigator } from './ControlsStackNavigator';
+import { SettingsStackNavigator } from './SettingsStackNavigator';
 import type { ParentTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<ParentTabParamList>();
@@ -27,6 +27,7 @@ const HIDDEN_TAB_BAR_ROUTES = new Set([
   'AddChildSuccess',
   'PairChildQr',
   'PairChildSuccess',
+  'LegalDocument',
 ]);
 
 type TabIconName = 'home' | 'users' | 'shield' | 'bar-chart-2' | 'settings';
@@ -175,9 +176,19 @@ export function ParentTabNavigator() {
         options={{ title: 'Reports' }}
       />
       <Tab.Screen
-        component={ParentSettingsScreen}
+        component={SettingsStackNavigator}
         name="Settings"
-        options={{ title: 'Settings' }}
+        options={({ route }) => {
+          const routeName = getFocusedRouteNameFromRoute(route) ?? 'SettingsHome';
+          const hideTabBar = HIDDEN_TAB_BAR_ROUTES.has(routeName);
+
+          return {
+            title: 'Settings',
+            tabBarStyle: hideTabBar
+              ? { ...styles.tabBar, display: 'none' }
+              : styles.tabBar,
+          };
+        }}
       />
     </Tab.Navigator>
   );

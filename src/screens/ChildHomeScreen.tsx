@@ -3,6 +3,7 @@ import {
   Alert,
   AppState,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +13,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Feather from 'react-native-vector-icons/Feather';
 import { AuthButton, ScreenLayout, useScreenStyles } from '../components';
 import { ChildDeviceAppsList } from '../components/android/ChildDeviceAppsList';
+import { ChildTodayUsageSection } from '../components/child/ChildTodayUsageSection';
 import { InfoTipCard } from '../components/parent';
 import { IOSScreenTimeAuthSection } from '../components/ios/IOSScreenTimeAuthSection';
 import { IOSScreenTimePanel } from '../components/ios/IOSScreenTimePanel';
@@ -133,17 +135,32 @@ export function ChildHomeScreen({ navigation }: Props) {
     };
   }, [childId]);
 
-  const handleSignOut = async () => {
-    if (childId) {
-      await clearChildSetupComplete(childId);
-    }
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign out?',
+      'You will need to pair this device again to reconnect with your parent.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign out',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              if (childId) {
+                await clearChildSetupComplete(childId);
+              }
 
-    await signOut();
+              await signOut();
+            })();
+          },
+        },
+      ],
+    );
   };
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      'Delete account',
+      'Delete account?',
       'This permanently deletes this child account and removes the link to your parent. Blocked apps and synced data for this device will be removed. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -199,7 +216,22 @@ export function ChildHomeScreen({ navigation }: Props) {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
-        <Text style={screenStyles.brand}>ParentKey Child</Text>
+        <View style={styles.topBar}>
+          <Text style={[screenStyles.brand, styles.brandText]}>
+            ParentKey Child
+          </Text>
+          <Pressable
+            accessibilityLabel="Sign out"
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={handleSignOut}
+            style={({ pressed }) => [
+              styles.signOutButton,
+              pressed && styles.signOutButtonPressed,
+            ]}>
+            <Text style={styles.signOutText}>Sign out</Text>
+          </Pressable>
+        </View>
         <Text style={[screenStyles.title, styles.title]}>
           {firstName ? `Hi, ${firstName}` : 'Connected'}
         </Text>
@@ -296,6 +328,12 @@ export function ChildHomeScreen({ navigation }: Props) {
           </>
         ) : (
           <>
+            <ChildTodayUsageSection
+              installedApps={androidBlocking.installedApps}
+              refreshKey={androidBlocking.lastSyncedAt}
+              usageAccessGranted={androidBlocking.usageAccessGranted}
+            />
+
             <AuthButton
               loading={androidBlocking.syncing}
               onPress={() => void androidBlocking.syncNow()}
@@ -314,12 +352,6 @@ export function ChildHomeScreen({ navigation }: Props) {
             />
           </>
         )}
-
-        <AuthButton
-          onPress={() => void handleSignOut()}
-          title="Sign out of this device"
-          variant="secondary"
-        />
 
         <View style={styles.dangerSection}>
           <Text style={styles.dangerTitle}>Danger zone</Text>
@@ -344,6 +376,34 @@ function createStyles(colors: ColorPalette) {
     content: {
       gap: spacing.md,
       paddingBottom: spacing.xl,
+    },
+    topBar: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    brandText: {
+      flex: 1,
+      paddingRight: spacing.sm,
+    },
+    signOutButton: {
+      alignItems: 'center',
+      backgroundColor: colors.input.background,
+      borderColor: colors.border.default,
+      borderRadius: radii.pill,
+      borderWidth: 1,
+      justifyContent: 'center',
+      minHeight: 36,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+    },
+    signOutButtonPressed: {
+      opacity: 0.75,
+    },
+    signOutText: {
+      ...typography.caption,
+      color: colors.text.brand,
+      fontWeight: '700',
     },
     title: {
       fontSize: 28,

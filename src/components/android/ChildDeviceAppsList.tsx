@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Feather from 'react-native-vector-icons/Feather';
-import { AppIcon } from '../AppIcon';
+import {
+  HorizontalAppsStrip,
+  type HorizontalAppItem,
+} from '../HorizontalAppsStrip';
 import { useTheme } from '../../context/ThemeContext';
 import type { InstalledApp } from '../../types/installedApp';
 import type { ColorPalette } from '../../theme/colors';
-import { radii, spacing, typography } from '../../theme';
+import { spacing, typography } from '../../theme';
 
 type ChildDeviceAppsListProps = {
   apps: InstalledApp[];
@@ -20,30 +22,42 @@ export function ChildDeviceAppsList({
 }: ChildDeviceAppsListProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
   const blockedSet = useMemo(
     () => new Set(blockedPackages),
     [blockedPackages],
   );
 
-  const sortedApps = useMemo(() => {
-    return [...apps].sort((left, right) => {
-      const leftBlocked = blockedSet.has(left.packageName);
-      const rightBlocked = blockedSet.has(right.packageName);
+  const { blockedItems, availableItems } = useMemo(() => {
+    const blocked: HorizontalAppItem[] = [];
+    const available: HorizontalAppItem[] = [];
 
-      if (leftBlocked !== rightBlocked) {
-        return leftBlocked ? -1 : 1;
+    for (const app of apps) {
+      const item: HorizontalAppItem = {
+        id: app.id,
+        packageName: app.packageName,
+        name: app.name,
+        iconUri: app.iconUri,
+        iconBase64: app.iconBase64,
+      };
+
+      if (blockedSet.has(app.packageName)) {
+        blocked.push({ ...item, subtitle: 'Blocked' });
+      } else {
+        available.push({ ...item, subtitle: 'Available' });
       }
+    }
 
-      return left.name.localeCompare(right.name);
-    });
+    blocked.sort((left, right) => left.name.localeCompare(right.name));
+    available.sort((left, right) => left.name.localeCompare(right.name));
+
+    return { blockedItems: blocked, availableItems: available };
   }, [apps, blockedSet]);
-
-  const blockedCount = blockedPackages.length;
 
   if (loading && apps.length === 0) {
     return (
       <View style={styles.container}>
-        <Text style={styles.sectionTitle}>Apps on this device</Text>
+        <Text style={styles.pageTitle}>Apps on this device</Text>
         <Text style={styles.emptyText}>Loading apps...</Text>
       </View>
     );
@@ -52,9 +66,9 @@ export function ChildDeviceAppsList({
   if (apps.length === 0) {
     return (
       <View style={styles.container}>
-        <Text style={styles.sectionTitle}>Apps on this device</Text>
+        <Text style={styles.pageTitle}>Apps on this device</Text>
         <Text style={styles.emptyText}>
-          Tap Sync apps and rules to scan apps on this phone.
+          Tap Sync apps now to scan apps on this phone.
         </Text>
       </View>
     );
@@ -62,44 +76,26 @@ export function ChildDeviceAppsList({
 
   return (
     <View style={styles.container}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Apps on this device</Text>
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle}>Apps on this device</Text>
         <Text style={styles.sectionMeta}>
-          {blockedCount} blocked · {apps.length} total
+          {blockedItems.length} blocked · {availableItems.length} available
         </Text>
       </View>
 
-      <View style={styles.list}>
-        {sortedApps.map(app => {
-          const isBlocked = blockedSet.has(app.packageName);
+      <HorizontalAppsStrip
+        countLabel={`${blockedItems.length} apps`}
+        emptyMessage="No apps are blocked right now."
+        items={blockedItems}
+        title="Blocked apps"
+      />
 
-          return (
-            <View
-              key={app.id}
-              style={[styles.row, isBlocked && styles.rowBlocked]}>
-              <AppIcon
-                iconBase64={app.iconBase64}
-                iconUri={app.iconUri}
-                name={app.name}
-                packageName={app.packageName}
-                size={40}
-              />
-              <View style={styles.appInfo}>
-                <Text style={styles.appName}>{app.name}</Text>
-                <Text style={styles.packageName}>{app.packageName}</Text>
-              </View>
-              {isBlocked ? (
-                <View style={styles.blockedBadge}>
-                  <Feather color={colors.error} name="lock" size={14} />
-                  <Text style={styles.blockedText}>Blocked</Text>
-                </View>
-              ) : (
-                <Text style={styles.allowedText}>Allowed</Text>
-              )}
-            </View>
-          );
-        })}
-      </View>
+      <HorizontalAppsStrip
+        countLabel={`${availableItems.length} apps`}
+        emptyMessage="No available apps found on this device."
+        items={availableItems}
+        title="Available apps"
+      />
     </View>
   );
 }
@@ -107,63 +103,19 @@ export function ChildDeviceAppsList({
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: {
-      gap: spacing.sm,
+      gap: spacing.md,
     },
-    sectionHeader: {
+    pageHeader: {
       gap: spacing.xs,
     },
-    sectionTitle: {
+    pageTitle: {
       ...typography.label,
       color: colors.text.primary,
-      fontSize: 16,
+      fontSize: 18,
     },
     sectionMeta: {
       ...typography.caption,
       color: colors.text.secondary,
-    },
-    list: {
-      gap: spacing.sm,
-    },
-    row: {
-      alignItems: 'center',
-      backgroundColor: colors.input.background,
-      borderColor: colors.border.default,
-      borderRadius: radii.lg,
-      borderWidth: 1,
-      flexDirection: 'row',
-      gap: spacing.md,
-      padding: spacing.md,
-    },
-    rowBlocked: {
-      borderColor: colors.error,
-    },
-    appInfo: {
-      flex: 1,
-      gap: 2,
-    },
-    appName: {
-      ...typography.label,
-      color: colors.text.primary,
-    },
-    packageName: {
-      ...typography.caption,
-      color: colors.text.placeholder,
-      fontSize: 11,
-    },
-    blockedBadge: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      gap: spacing.xs,
-    },
-    blockedText: {
-      ...typography.caption,
-      color: colors.error,
-      fontWeight: '700',
-    },
-    allowedText: {
-      ...typography.caption,
-      color: colors.success,
-      fontWeight: '600',
     },
     emptyText: {
       ...typography.caption,

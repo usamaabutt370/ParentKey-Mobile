@@ -60,7 +60,14 @@ export type ParentTabParamList = {
   Children: NavigatorScreenParams<ChildrenStackParamList> | undefined;
   Controls: NavigatorScreenParams<ControlsStackParamList> | undefined;
   Reports: undefined;
-  Settings: undefined;
+  Settings: NavigatorScreenParams<SettingsStackParamList> | undefined;
+};
+
+export type SettingsStackParamList = {
+  SettingsHome: undefined;
+  LegalDocument: {
+    document: 'privacy' | 'terms';
+  };
 };
 
 export type ChildStackParamList = {
