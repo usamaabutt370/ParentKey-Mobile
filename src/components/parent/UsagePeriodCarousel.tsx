@@ -405,10 +405,10 @@ export function UsagePeriodCarousel({ cards, emptyHint }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createCarouselStyles(colors), [colors]);
   const { width: windowWidth } = useWindowDimensions();
-  const sidePadding = spacing.lg;
-  const cardGap = spacing.md;
+  /** Visible sliver of the previous/next card on each side. */
   const peek = spacing.lg;
-  const cardWidth = Math.max(windowWidth - sidePadding * 2 - peek, 280);
+  const cardGap = spacing.md;
+  const cardWidth = Math.max(windowWidth - peek * 2, 280);
   const itemStride = cardWidth + cardGap;
   const listRef = useRef<FlatList<LoopItem>>(null);
   const isJumpingRef = useRef(false);
@@ -558,7 +558,7 @@ export function UsagePeriodCarousel({ cards, emptyHint }: Props) {
         windowSize={7}
         contentContainerStyle={[
           styles.listContent,
-          { paddingHorizontal: sidePadding },
+          { paddingHorizontal: peek },
         ]}
       />
       <View style={styles.dots}>
@@ -580,7 +580,6 @@ function createCarouselStyles(colors: ColorPalette) {
   return StyleSheet.create({
     wrap: {
       gap: spacing.sm,
-      marginHorizontal: -spacing.lg,
       marginTop: 20,
     },
     listContent: {

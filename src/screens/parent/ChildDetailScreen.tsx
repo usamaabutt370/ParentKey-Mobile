@@ -3,13 +3,14 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import QRCode from 'react-native-qrcode-svg';
+// import QRCode from 'react-native-qrcode-svg';
 import { InfoTipCard, ScreenHeader } from '../../components/parent';
 import { AuthButton, ScreenLayout } from '../../components';
 import {
@@ -17,10 +18,10 @@ import {
   type HorizontalAppItem,
 } from '../../components/HorizontalAppsStrip';
 import { getChildAvatar } from '../../constants/childAvatars';
-import { buildPairingQrValue } from '../../constants/pairing';
+// import { buildPairingQrValue } from '../../constants/pairing';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useExpiryCountdown } from '../../hooks/useExpiryCountdown';
+// import { useExpiryCountdown } from '../../hooks/useExpiryCountdown';
 import {
   fetchChildBlockRules,
   fetchChildInstalledApps,
@@ -38,7 +39,7 @@ import {
   type AppIconData,
 } from '../../lib/installedApps';
 import {
-  createReconnectSession,
+  // createReconnectSession,
   subscribeToPairingSession,
   type PairingSession,
 } from '../../lib/pairing';
@@ -74,9 +75,9 @@ export function ChildDetailScreen({ navigation, route }: Props) {
   const [deleting, setDeleting] = useState(false);
   const [reconnectSession, setReconnectSession] =
     useState<PairingSession | null>(null);
-  const [reconnectLoading, setReconnectLoading] = useState(false);
-  const [reconnectError, setReconnectError] = useState<string | null>(null);
-  const reconnectExpiryLabel = useExpiryCountdown(reconnectSession?.expiresAt);
+  // const [reconnectLoading, setReconnectLoading] = useState(false);
+  // const [reconnectError, setReconnectError] = useState<string | null>(null);
+  // const reconnectExpiryLabel = useExpiryCountdown(reconnectSession?.expiresAt);
 
   const loadChild = useCallback(async () => {
     const parentId = session?.user.id;
@@ -133,21 +134,21 @@ export function ChildDetailScreen({ navigation, route }: Props) {
     }, [loadChild]),
   );
 
-  const startReconnect = useCallback(async () => {
-    setReconnectLoading(true);
-    setReconnectError(null);
+  // const startReconnect = useCallback(async () => {
+  //   setReconnectLoading(true);
+  //   setReconnectError(null);
 
-    const result = await createReconnectSession(childId);
-    setReconnectLoading(false);
+  //   const result = await createReconnectSession(childId);
+  //   setReconnectLoading(false);
 
-    if (!result.ok) {
-      setReconnectSession(null);
-      setReconnectError(result.message);
-      return;
-    }
+  //   if (!result.ok) {
+  //     setReconnectSession(null);
+  //     setReconnectError(result.message);
+  //     return;
+  //   }
 
-    setReconnectSession(result.session);
-  }, [childId]);
+  //   setReconnectSession(result.session);
+  // }, [childId]);
 
   useEffect(() => {
     if (!reconnectSession) {
@@ -350,7 +351,7 @@ export function ChildDetailScreen({ navigation, route }: Props) {
             </View>
           </View>
 
-          <View style={styles.section}>
+          {/* <View style={styles.section}>
             <Text style={styles.sectionTitle}>Reconnect device</Text>
             {reconnectSession ? (
               <>
@@ -384,17 +385,43 @@ export function ChildDetailScreen({ navigation, route }: Props) {
             {reconnectError ? (
               <Text style={styles.errorText}>{reconnectError}</Text>
             ) : null}
-          </View>
+          </View> */}
 
           <View style={styles.section}>
             {blockRules.length === 0 ? (
               <>
-                <Text style={styles.sectionTitle}>Blocked apps</Text>
-                <InfoTipCard message="No apps are blocked for this child yet. Block apps from Controls or tap the button below." />
+                <View style={styles.blockedHeaderRow}>
+                  <Text style={styles.sectionTitle}>Blocked apps</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={handleManageBlocks}
+                    style={({ pressed }) => [
+                      styles.manageBlockedButton,
+                      pressed && styles.manageBlockedButtonPressed,
+                    ]}>
+                    <Text numberOfLines={1} style={styles.manageBlockedText}>
+                      Block apps
+                    </Text>
+                  </Pressable>
+                </View>
+                <InfoTipCard message="No apps are blocked for this child yet. Block apps from Controls or tap the button above." />
               </>
             ) : (
               <HorizontalAppsStrip
                 countLabel={`${blockRules.length} blocked`}
+                headerRight={
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={handleManageBlocks}
+                    style={({ pressed }) => [
+                      styles.manageBlockedButton,
+                      pressed && styles.manageBlockedButtonPressed,
+                    ]}>
+                    <Text numberOfLines={1} style={styles.manageBlockedText}>
+                      Manage apps
+                    </Text>
+                  </Pressable>
+                }
                 items={blockedAppItems}
                 onPressItem={item => {
                   const rule = blockRules.find(
@@ -407,13 +434,6 @@ export function ChildDetailScreen({ navigation, route }: Props) {
                 title="Blocked apps"
               />
             )}
-            <AuthButton
-              onPress={handleManageBlocks}
-              title={
-                blockRules.length === 0 ? 'Block apps' : 'Manage blocked apps'
-              }
-              variant={blockRules.length === 0 ? 'primary' : 'secondary'}
-            />
           </View>
 
           <View style={styles.dangerSection}>
@@ -539,7 +559,35 @@ function createStyles(colors: ColorPalette) {
     sectionTitle: {
       ...typography.label,
       color: colors.text.primary,
+      flexShrink: 1,
       fontSize: 18,
+      marginRight: spacing.sm,
+    },
+    blockedHeaderRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: spacing.sm,
+      justifyContent: 'space-between',
+    },
+    manageBlockedButton: {
+      alignItems: 'center',
+      borderColor: colors.brand.teal,
+      borderRadius: radii.pill,
+      borderWidth: 1.5,
+      height: 40,
+      justifyContent: 'center',
+      paddingHorizontal: spacing.sm,
+      width: '50%',
+    },
+    manageBlockedButtonPressed: {
+      opacity: 0.85,
+    },
+    manageBlockedText: {
+      ...typography.label,
+      color: colors.brand.tealLight,
+      fontSize: 13,
+      fontWeight: '600',
+      textAlign: 'center',
     },
     syncMeta: {
       ...typography.caption,

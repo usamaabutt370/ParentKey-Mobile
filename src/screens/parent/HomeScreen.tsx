@@ -205,6 +205,7 @@ function createStyles(colors: ColorPalette) {
     },
     layout: {
       paddingBottom: 0,
+      paddingHorizontal: 0,
       paddingTop: spacing.xs,
     },
     content: {
@@ -219,6 +220,7 @@ function createStyles(colors: ColorPalette) {
       gap: spacing.sm,
       justifyContent: 'space-between',
       marginBottom: 0,
+      paddingHorizontal: spacing.lg,
     },
     topBarSpacer: {
       flex: 1,
