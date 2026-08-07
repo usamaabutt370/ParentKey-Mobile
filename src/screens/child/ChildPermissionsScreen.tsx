@@ -11,6 +11,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthButton, ScreenLayout } from '../../components';
 import { ChildSetupStepLayout } from '../../components/child/ChildSetupStepLayout';
 import { CHILD_SETUP_TOTAL_STEPS } from '../../constants/childSetup';
+import { getChildPermissionImage } from '../../constants/childOnboarding';
 import { useAuth } from '../../context/AuthContext';
 import {
   getChildPermissionSteps,
@@ -220,32 +221,29 @@ export function ChildPermissionsScreen({ navigation }: Props) {
 
   return (
     <ScreenLayout
-      safeAreaEdges={['top', 'left', 'right']}
+      safeAreaEdges={['top', 'left', 'right', 'bottom']}
+      scrollable
       contentStyle={styles.content}>
-      <View style={styles.root}>
-        <View style={styles.setupContent}>
-          <ChildSetupStepLayout
-            currentStep={stepIndex + 3}
-            icon={step.icon}
-            subtitle={step.description}
-            title={step.title}
-            totalSteps={CHILD_SETUP_TOTAL_STEPS}>
-            {actionError ? (
-              <Text style={styles.errorText}>{actionError}</Text>
-            ) : null}
-          </ChildSetupStepLayout>
-        </View>
-
-        {!currentGranted ? (
-          <View style={styles.footer}>
-            <AuthButton
-              loading={continuing}
-              onPress={() => void handleOpenSettings()}
-              title={step.buttonTitle}
-            />
-          </View>
+      <ChildSetupStepLayout
+        currentStep={stepIndex + 3}
+        image={getChildPermissionImage(step.key)}
+        subtitle={step.description}
+        title={step.title}
+        totalSteps={CHILD_SETUP_TOTAL_STEPS}>
+        {actionError ? (
+          <Text style={styles.errorText}>{actionError}</Text>
         ) : null}
-      </View>
+      </ChildSetupStepLayout>
+
+      {!currentGranted ? (
+        <View style={styles.footer}>
+          <AuthButton
+            loading={continuing}
+            onPress={() => void handleOpenSettings()}
+            title={step.buttonTitle}
+          />
+        </View>
+      ) : null}
     </ScreenLayout>
   );
 }
@@ -253,20 +251,14 @@ export function ChildPermissionsScreen({ navigation }: Props) {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     content: {
-      flex: 1,
-    },
-    root: {
-      flex: 1,
-    },
-    setupContent: {
-      flex: 1,
-      paddingBottom: 160,
+      flexGrow: 1,
+      gap: spacing.md,
+      justifyContent: 'space-between',
+      paddingBottom: spacing.lg,
     },
     footer: {
-      bottom: 100,
-      left: 0,
-      position: 'absolute',
-      right: 0,
+      marginTop: spacing.sm,
+      zIndex: 2,
     },
     loading: {
       alignItems: 'center',

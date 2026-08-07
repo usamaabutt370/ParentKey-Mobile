@@ -1,12 +1,15 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import {
   CameraView,
   useCameraPermissions,
   type BarcodeScanningResult,
 } from 'expo-camera';
-import { AuthButton, ScreenLayout } from '../../components';
-import { InfoTipCard } from '../../components/parent';
+import { AuthButton, ScreenLayout, Spacer } from '../../components';
+import {
+  CHILD_ONBOARDING_IMAGES,
+  pickThemeableImage,
+} from '../../constants/childOnboarding';
 import { parsePairingTokenFromQr } from '../../constants/pairing';
 import { useTheme } from '../../context/ThemeContext';
 import { claimPairingWithToken } from '../../lib/pairing';
@@ -14,8 +17,11 @@ import type { ColorPalette } from '../../theme/colors';
 import { radii, spacing, typography } from '../../theme';
 
 export function ChildPairingScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const { width: windowWidth } = useWindowDimensions();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const scanQrImage = pickThemeableImage(CHILD_ONBOARDING_IMAGES.scanQr, isDark);
+  const heroSize = Math.round(windowWidth * 0.7);
   const [permission, requestPermission] = useCameraPermissions();
   const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,31 +65,58 @@ export function ChildPairingScreen() {
   }
 
   if (!permission.granted) {
+    const handleAllowCamera = async () => {
+      setError(null);
+      const result = await requestPermission();
+      if (!result.granted) {
+        setError(
+          result.canAskAgain
+            ? 'Camera access is still off. Tap Allow camera access again and choose Allow.'
+            : 'Camera access was denied. Enable it in system Settings → Apps → ParentKey Child → Permissions.',
+        );
+      }
+    };
+
     return (
       <ScreenLayout
-        safeAreaEdges={['top', 'left', 'right']}
+        safeAreaEdges={['top', 'left', 'right', 'bottom']}
+        scrollable
         contentStyle={styles.permissionLayout}>
-        <View style={styles.permissionContent}>
-          <View style={styles.header}>
-            <Text style={styles.brand}>ParentKey Child</Text>
-            <Text style={styles.title}>Link this device</Text>
-            <Text style={styles.subtitle}>
-              Scan the QR code from your parent&apos;s phone to connect this
-              device. No email or password needed.
-            </Text>
+        <View style={styles.header}>
+          <Text style={styles.brand}>ParentKey Child</Text>
+          <Spacer.Column numberOfSpaces={10} />
+
+          <View
+            style={[
+              styles.heroFrame,
+              {
+                width: heroSize,
+                height: heroSize,
+              },
+            ]}>
+            <Image
+              accessibilityIgnoresInvertColors
+              resizeMode="cover"
+              source={scanQrImage}
+              style={styles.heroImage}
+            />
           </View>
-
-          <InfoTipCard message="Camera access is required to scan your parent's QR code." />
-
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          <Spacer.Column numberOfSpaces={10} />
+          <Text style={styles.title}>Link this device</Text>
+          <Text style={styles.subtitle}>
+            Scan the QR code from your parent&apos;s phone to connect this
+            device. No email or password needed.
+          </Text>
         </View>
 
-        <View style={styles.permissionFooter}>
-          <AuthButton
-            loading={claiming}
-            onPress={() => void requestPermission()}
-            title="Allow camera access"
-          />
+
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      <View style= {styles.permissionFooter}>
+        <AuthButton
+          loading={claiming}
+          onPress={() => void handleAllowCamera()}
+          title="Allow camera access"
+        />
         </View>
       </ScreenLayout>
     );
@@ -93,6 +126,7 @@ export function ChildPairingScreen() {
     <ScreenLayout contentStyle={styles.scannerLayout}>
       <View style={styles.scannerHeader}>
         <Text style={styles.brand}>ParentKey Child</Text>
+        <Spacer.Column numberOfSpaces={10} />
         <Text style={styles.scannerTitle}>Scan parent QR code</Text>
         <Text style={styles.scannerSubtitle}>
           Point your camera at the QR code shown in the parent app.
@@ -123,25 +157,31 @@ export function ChildPairingScreen() {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     permissionLayout: {
-      flex: 1,
-    },
-    permissionContent: {
-      flex: 1,
-      gap: spacing.xl,
-      paddingBottom: 160,
-    },
-    permissionFooter: {
-      bottom: 100,
-      left: 0,
-      position: 'absolute',
-      right: 0,
+      flexGrow: 1,
+      justifyContent: 'space-between',
+      paddingBottom: spacing.lg,
     },
     centered: {
       alignItems: 'center',
       justifyContent: 'center',
     },
     header: {
+      alignItems: 'center',
       gap: spacing.sm,
+    },
+    heroFrame: {
+      alignSelf: 'center',
+      backgroundColor: colors.background.primary,
+      borderColor: colors.border.default,
+      borderRadius: radii.xl,
+      borderWidth: 1,
+      marginVertical: spacing.sm,
+      overflow: 'hidden',
+    },
+    heroImage: {
+      borderRadius: radii.xl,
+      height: '100%',
+      width: '100%',
     },
     brand: {
       color: colors.text.brand,
@@ -153,10 +193,12 @@ function createStyles(colors: ColorPalette) {
       ...typography.title,
       color: colors.text.primary,
       fontSize: 28,
+      textAlign: 'center',
     },
     subtitle: {
       ...typography.subtitle,
       color: colors.text.secondary,
+      textAlign: 'center',
     },
     scannerLayout: {
       gap: spacing.lg,
@@ -203,6 +245,12 @@ function createStyles(colors: ColorPalette) {
       ...typography.body,
       color: colors.error,
       textAlign: 'center',
+    },
+    permissionFooter: {
+      bottom: 50,
+      left: 0,
+      position: 'absolute',
+      right: 0,
     },
   });
 }

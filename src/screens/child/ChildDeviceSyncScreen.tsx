@@ -11,6 +11,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import { AuthButton, ScreenLayout } from '../../components';
 import { ChildSetupStepLayout } from '../../components/child/ChildSetupStepLayout';
 import { CHILD_SETUP_TOTAL_STEPS } from '../../constants/childSetup';
+import { CHILD_ONBOARDING_IMAGES } from '../../constants/childOnboarding';
 import { useAuth } from '../../context/AuthContext';
 import { useChildAppBlocking } from '../../hooks/useChildAppBlocking';
 import { markChildSetupComplete } from '../../lib/childSetup';
@@ -136,7 +137,7 @@ export function ChildDeviceSyncScreen({ navigation }: Props) {
       contentStyle={styles.content}>
       <ChildSetupStepLayout
         currentStep={CHILD_SETUP_TOTAL_STEPS}
-        icon={phase === 'done' ? '✅' : '📱'}
+        image={CHILD_ONBOARDING_IMAGES.deviceReady}
         subtitle={statusMessage}
         title={phase === 'done' ? 'Device ready' : 'Setting up this device'}
         totalSteps={CHILD_SETUP_TOTAL_STEPS}>

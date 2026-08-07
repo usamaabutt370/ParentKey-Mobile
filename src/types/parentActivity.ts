@@ -22,6 +22,7 @@ export type ChildActivitySummary = {
   blockedAppsCount: number;
   lastSyncedAt: string | null;
   deviceStatus: 'online' | 'offline' | 'never';
+  deviceLabel: string | null;
 };
 
 export type ParentActivityStats = {

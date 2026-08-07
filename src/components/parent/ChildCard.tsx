@@ -13,6 +13,7 @@ type ChildCardProps = {
   onPress?: () => void;
   screenTimeToday?: string;
   deviceStatus?: 'online' | 'offline' | 'never';
+  deviceLabel?: string | null;
 };
 
 export function ChildCard({
@@ -20,6 +21,7 @@ export function ChildCard({
   onPress,
   screenTimeToday,
   deviceStatus,
+  deviceLabel,
 }: ChildCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -33,7 +35,7 @@ export function ChildCard({
   }, [photoUrl]);
 
   const showPhoto = Boolean(photoUrl) && !photoFailed;
-  const subtitle = child.email ?? 'Linked account';
+  const subtitle = deviceLabel?.trim() || null;
   const meta = screenTimeToday
     ? `${screenTimeToday} today`
     : child.age != null
@@ -72,7 +74,7 @@ export function ChildCard({
         </View>
         <View style={styles.info}>
           <Text style={styles.name}>{displayName}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
         <View style={styles.metaColumn}>
           <Text style={[styles.meta, deviceStatus ? { color: statusColor } : null]}>

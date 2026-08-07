@@ -187,6 +187,7 @@ export function ParentChildrenScreen({ navigation }: Props) {
               return (
                 <ChildCard
                   child={child}
+                  deviceLabel={activity?.deviceLabel}
                   deviceStatus={activity?.deviceStatus}
                   key={child.id}
                   onPress={() =>

@@ -121,6 +121,56 @@ export async function updatePassword(
   return { ok: true };
 }
 
+export async function updateParentProfile(params: {
+  firstName: string;
+  lastName: string;
+}): Promise<AuthActionResult> {
+  const firstName = params.firstName.trim();
+  const lastName = params.lastName.trim();
+
+  if (!firstName) {
+    return { ok: false, message: 'First name is required.' };
+  }
+
+  const fullName = [firstName, lastName].filter(Boolean).join(' ');
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { ok: false, message: 'You must be signed in to update your profile.' };
+  }
+
+  const { error: metaError } = await supabase.auth.updateUser({
+    data: {
+      first_name: firstName,
+      last_name: lastName,
+      full_name: fullName,
+    },
+  });
+
+  if (metaError) {
+    return { ok: false, message: metaError.message };
+  }
+
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({
+      first_name: firstName,
+      last_name: lastName,
+      full_name: fullName,
+    })
+    .eq('id', user.id);
+
+  if (profileError) {
+    return { ok: false, message: profileError.message };
+  }
+
+  return { ok: true };
+}
+
 type AuthUrlTokens = {
   accessToken: string;
   refreshToken: string;

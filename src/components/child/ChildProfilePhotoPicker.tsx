@@ -13,7 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Feather from 'react-native-vector-icons/Feather';
 import { useTheme } from '../../context/ThemeContext';
 import type { ColorPalette } from '../../theme/colors';
-import { radii, spacing, typography } from '../../theme';
+import {  spacing, typography } from '../../theme';
 
 type Props = {
   imageUri: string | null;
@@ -38,8 +38,7 @@ export function ChildProfilePhotoPicker({ imageUri, onChange }: Props) {
     setPicking(true);
     try {
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
+        allowsEditing: false,
         quality: 0.8,
       });
 
@@ -68,8 +67,7 @@ export function ChildProfilePhotoPicker({ imageUri, onChange }: Props) {
     setPicking(true);
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
+        allowsEditing: false,
         mediaTypes: ['images'],
         quality: 0.8,
       });

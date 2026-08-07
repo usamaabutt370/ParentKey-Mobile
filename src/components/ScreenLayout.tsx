@@ -46,7 +46,7 @@ export function ScreenLayout({
 
   const body = keyboardAvoiding ? (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       style={styles.flex}>
       {content}
