@@ -331,10 +331,10 @@ export function ChildDetailScreen({ navigation, route }: Props) {
             </View>
             <Text style={styles.heroName}>{displayName}</Text>
             <View style={styles.detailsGrid}>
-              <View style={styles.detailsRow}>
+              {/* <View style={styles.detailsRow}>
                 <DetailRow label="First name" value={child.firstName ?? '—'} />
                 <DetailRow label="Last name" value={child.lastName ?? '—'} />
-              </View>
+              </View> */}
               <View style={styles.detailsRow}>
                 <DetailRow
                   label="Age"

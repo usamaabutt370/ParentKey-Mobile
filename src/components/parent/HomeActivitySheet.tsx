@@ -172,11 +172,11 @@ export function HomeActivitySheet({
               <Text numberOfLines={1} style={styles.peekTitle}>
                 {heading}
               </Text>
-              <Text numberOfLines={1} style={styles.peekSubtitle}>
+              {/* <Text numberOfLines={1} style={styles.peekSubtitle}>
                 {loading
                   ? 'Loading…'
                   : `Today ${summary.todayLabel} · Week ${summary.weekLabel}`}
-              </Text>
+              </Text> */}
             </View>
           </View>
         </View>
@@ -234,7 +234,6 @@ export function HomeActivitySheet({
                 : 'No app usage synced for today yet.'}
             </Text>
           )}
-
           {showDeviceProtection ? (
             <>
               <Text style={styles.sectionLabel}>Device protection</Text>
@@ -258,16 +257,18 @@ export function HomeActivitySheet({
               </View>
             </>
           ) : null}
-
-          <Text style={styles.sectionLabel}>Blocked apps</Text>
-          <AuthButton
-            key={blockedRules.length === 0 ? 'block-apps' : 'manage-blocked'}
-            onPress={onManageBlockedApps}
-            title={
-              blockedRules.length === 0 ? 'Block apps' : 'Manage blocked apps'
-            }
-            variant={blockedRules.length === 0 ? 'primary' : 'secondary'}
-          />
+            <View style={styles.blockedAppsSection}>
+              <Text style={styles.sectionLabel}>Blocked apps</Text>
+              <View style={styles.manageBlockedButton}>
+                <AuthButton
+                style={{ width: '100%', height: 40 }}
+                  key={blockedRules.length === 0 ? 'block-apps' : 'manage-blocked'}
+                  onPress={onManageBlockedApps}
+                  title={blockedRules.length === 0 ? 'Block apps' : 'Manage apps'}
+                  variant={blockedRules.length === 0 ? 'primary' : 'secondary'}
+                />
+                </View>
+            </View>
           {loading ? (
             <Text style={styles.emptyHint}>Loading blocked apps…</Text>
           ) : blockedRules.length === 0 ? (
@@ -377,7 +378,7 @@ function createStyles(colors: ColorPalette) {
     peekTitle: {
       ...typography.label,
       color: colors.text.primary,
-      fontSize: 15,
+      fontSize: 25,
       fontWeight: '700',
     },
     peekSubtitle: {
@@ -396,10 +397,15 @@ function createStyles(colors: ColorPalette) {
     sectionLabel: {
       ...typography.label,
       color: colors.text.secondary,
-      fontSize: 12,
+      fontSize: 15,
       letterSpacing: 0.4,
       marginTop: spacing.xs,
       textTransform: 'uppercase',
+    },
+    manageBlockedButton: {
+      alignItems:'flex-end',
+      width: '50%',
+      backgroundColor: 'transparent',
     },
     summaryGrid: {
       flexDirection: 'row',
@@ -528,6 +534,11 @@ function createStyles(colors: ColorPalette) {
       color: colors.text.brand,
       fontWeight: '700',
       textDecorationLine: 'underline',
+    },
+    blockedAppsSection: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
   });
 }

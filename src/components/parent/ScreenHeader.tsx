@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useTheme } from '../../context/ThemeContext';
@@ -7,15 +7,19 @@ import { spacing, typography } from '../../theme';
 
 type ScreenHeaderProps = {
   onBack?: () => void;
-  stepLabel?: string;
   title?: string;
+  rightAction?: ReactNode;
+  /** Shown below the header bar, not inside it. */
+  stepLabel?: string;
+  /** Shown below the header bar, not inside it. */
   subtitle?: string;
 };
 
 export function ScreenHeader({
   onBack,
-  stepLabel,
   title,
+  rightAction,
+  stepLabel,
   subtitle,
 }: ScreenHeaderProps) {
   const { colors } = useTheme();
@@ -23,19 +27,43 @@ export function ScreenHeader({
 
   return (
     <View style={styles.container}>
-      {onBack ? (
-        <Pressable
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-          hitSlop={8}
-          onPress={onBack}
-          style={styles.backButton}>
-          <Feather color={colors.text.primary} name="chevron-left" size={24} />
-        </Pressable>
+      <View style={styles.bar}>
+        <View style={styles.side}>
+          {onBack ? (
+            <Pressable
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={onBack}
+              style={styles.iconButton}>
+              <Feather
+                color={colors.text.primary}
+                name="chevron-left"
+                size={24}
+              />
+            </Pressable>
+          ) : null}
+        </View>
+
+        <View style={styles.titleWrap}>
+          {title ? (
+            <Text numberOfLines={1} style={styles.title}>
+              {title}
+            </Text>
+          ) : null}
+        </View>
+
+        <View style={[styles.side, styles.sideRight]}>
+          {rightAction ?? null}
+        </View>
+      </View>
+
+      {stepLabel || subtitle ? (
+        <View style={styles.meta}>
+          {stepLabel ? <Text style={styles.stepLabel}>{stepLabel}</Text> : null}
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        </View>
       ) : null}
-      {stepLabel ? <Text style={styles.stepLabel}>{stepLabel}</Text> : null}
-      <Text style={styles.title}>{title}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
   );
 }
@@ -44,22 +72,48 @@ function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: {
       gap: spacing.sm,
-      flexDirection: 'row',
     },
-    backButton: {
-      alignSelf: 'flex-start',
-      marginBottom: spacing.xs,
+    bar: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      minHeight: 40,
+    },
+    side: {
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      minWidth: 40,
+    },
+    sideRight: {
+      alignItems: 'flex-end',
+    },
+    iconButton: {
+      alignItems: 'center',
+      height: 40,
+      justifyContent: 'center',
       marginLeft: -spacing.xs,
+      width: 40,
+    },
+    titleWrap: {
+      alignItems: 'center',
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: spacing.sm,
+    },
+    title: {
+      ...typography.label,
+      color: colors.text.primary,
+      fontSize: 18,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    meta: {
+      gap: spacing.xs,
+      paddingHorizontal: spacing.xs,
     },
     stepLabel: {
       ...typography.caption,
       color: colors.text.brand,
       fontWeight: '600',
-    },
-    title: {
-      ...typography.title,
-      color: colors.text.primary,
-      fontSize: 28,
     },
     subtitle: {
       ...typography.subtitle,

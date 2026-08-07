@@ -223,19 +223,13 @@ export function SelectAppsScreen({ navigation, route }: Props) {
   };
 
   return (
-    <ScreenLayout safeAreaEdges={['top', 'left', 'right']} style={styles.layout}>
+    <ScreenLayout
+      contentStyle={styles.body}
+      safeAreaEdges={['top', 'left', 'right']}
+      style={styles.layout}>
       <View style={styles.headerSection}>
         <ScreenHeader
           onBack={() => navigation.goBack()}
-          subtitle={
-            mode === 'block'
-              ? Platform.OS === 'ios'
-                ? "Set up app blocking on your child's iPhone with Screen Time"
-                : "Choose apps to block on your child's Android device"
-              : Platform.OS === 'ios'
-                ? "Set up app limits on your child's iPhone with Screen Time"
-                : "Choose apps to limit on your child's device"
-          }
           title="Select apps"
         />
       </View>
@@ -319,6 +313,10 @@ function createStyles(colors: ColorPalette) {
     layout: {
       flex: 1,
       paddingHorizontal: 0,
+      paddingTop: 0,
+    },
+    body: {
+      gap: 0,
     },
     iosPanel: {
       flex: 1,
@@ -328,7 +326,6 @@ function createStyles(colors: ColorPalette) {
       paddingBottom: spacing.lg,
     },
     headerSection: {
-      paddingBottom: spacing.sm,
       paddingHorizontal: spacing.lg,
     },
     list: {

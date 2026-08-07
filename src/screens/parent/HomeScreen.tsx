@@ -233,6 +233,7 @@ function createStyles(colors: ColorPalette) {
       flexShrink: 0,
       gap: 0,
       maxWidth: '42%',
+      marginTop: 15,
     },
     brandText: {
       fontSize: 22,
@@ -242,7 +243,7 @@ function createStyles(colors: ColorPalette) {
     parentName: {
       ...typography.caption,
       color: colors.text.primary,
-      fontSize: 13,
+      fontSize: 20,
       fontWeight: '600',
       lineHeight: 16,
       textAlign: 'right',

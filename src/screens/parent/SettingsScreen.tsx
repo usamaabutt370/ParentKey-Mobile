@@ -234,6 +234,12 @@ export function ParentSettingsScreen({ navigation }: Props) {
               textContentType="familyName"
               value={lastName}
             />
+            <AuthTextInput
+              editable={false}
+              label="Email"
+              placeholder="Email"
+              value={email || '—'}
+            />
             {profileError ? (
               <Text style={styles.profileError}>{profileError}</Text>
             ) : null}
